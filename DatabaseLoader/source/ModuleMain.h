@@ -1,0 +1,22 @@
+#pragma once
+#include "YYToolkit/YYTK_Shared.hpp"
+#include <sol/sol.hpp>
+
+using namespace std;
+using namespace Aurie;
+using namespace YYTK;
+using namespace sol;
+
+namespace DatabaseLoader
+{
+	inline int behaviorCount = 0;
+	inline int currentState = 0;
+	inline bool loadingMods = true;
+	void UnloadMods();
+	void LoadMods();
+	sol::state MakeModState();
+	int LoadFileRequire(lua_State* L);
+	class ModuleMain
+	{
+	};
+}
