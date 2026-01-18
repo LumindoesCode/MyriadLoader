@@ -340,7 +340,7 @@ sol::state DatabaseLoader::MakeModState()
 	inState["draw_set_color"] = DBLua::DrawSetColor;
 	inState["draw_set_colour"] = DBLua::DrawSetColor;
 
-	inState["spawn_enemy"] = DBLua::SpawnEnemy;
+	inState["spawn_object"] = DBLua::SpawnObject;
 
 	inState["spawn_boss_intro"] = DBLua::SpawnBossIntro;
 

@@ -758,7 +758,7 @@ void DatabaseLoader::DBLua::AddScreenshake(double amount)
 	GMWrappers::CallGameScript("gml_Script_shake", { amount });
 }
 
-double DatabaseLoader::DBLua::SpawnEnemy(double x, double y, string name)
+double DatabaseLoader::DBLua::SpawnObject(double x, double y, string name)
 {
 	RValue enemyAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { (string_view)name });
 	RValue enemyExists = g_YYTKInterface->CallBuiltin("object_exists", { enemyAsset });
