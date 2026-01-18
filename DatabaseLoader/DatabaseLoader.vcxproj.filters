@@ -200,6 +200,9 @@
     <ClInclude Include="source\SaverLoader.h">
       <Filter>Hlavičkové soubory</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\CallbackManagerInterface.h">
+      <Filter>Hlavičkové soubory</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="include\lua54.dll" />

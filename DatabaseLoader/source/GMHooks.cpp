@@ -395,35 +395,34 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 						RValue floordsmap = g_YYTKInterface->CallBuiltin("ds_map_create", {});
 						g_YYTKInterface->CallBuiltin("ds_map_copy", { floordsmap, GMWrappers::GetGlobal("floormap_1") });
 						string floorRooms = Files::GetModsDirectory() + tbl.get<string>("Rooms");
-						string floorRoomsDestiny = tbl.get<string>("RoomsDestination");
-						string roomsDirectory = "rooms/";
-						double music;
+						string floorRoomsDestiny = Files::GetModsDirectory() + tbl.get<string>("RoomsDestination");
 						static bool shouldQueueCustom = false;
 						static string customFloorName = "";
 						static int customFloorNumber = 0;
 						static string customFloorNumberFull = "";
 
-
-						string floorRoomsDirectoryDestiny = roomsDirectory.append(floorRoomsDestiny);
-
-						RValue roomsDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)floorRoomsDirectoryDestiny });
+						RValue roomsDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)floorRoomsDestiny });
 
 						//thank orio prisco for this
 						//string* stringtogivetostarprov = new string(floorRoomsDestiny);
 
-						ifstream src(floorRooms);
-						ofstream  dst(roomsDestinyString.ToString());
-						dst << src.rdbuf();
+						//ifstream src(floorRooms);
+						//ofstream dst(floorRoomsDestiny);
+						//dst << src.rdbuf();
+						g_YYTKInterface->PrintInfo((string_view)floorRoomsDestiny);
 
+						double music = tbl.get<double>("Music");
+						int functionID;
 
 						g_YYTKInterface->CallBuiltin("ds_map_set", { floordsmap, "index", id });
+
+						g_YYTKInterface->CallBuiltin("ds_map_add", { GMWrappers::GetGlobal("layout_map"), (string_view)floorRoomsDestiny, id });
 
 						g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "layout", roomsDestinyString });
 						g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "music", music });
 
 
 
-						music = tbl.get<double>("Music");
 
 						double bossList = tbl.get<double>("BossList");
 						
@@ -490,7 +489,7 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 							RValue roomAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_room" });
 							double allRooms = g_YYTKInterface->CallBuiltin("instance_number", { roomAsset }).ToDouble() - 1;
 
-							//GMWrappers::SetGlobal("current_music", floorMusic);
+							GMWrappers::SetGlobal("current_music", floorMusic);
 
 							for (int i = 0; i < allRooms; i++)
 							{
@@ -499,12 +498,9 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 								g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "color2", tbl.get<double>("ColorG") });
 								g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "color3", tbl.get<double>("ColorB") });
 
-								if (g_YYTKInterface->CallBuiltin("variable_instance_get", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "sprite_index" }).ToDouble())
-								{
-								}
 								g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "room_theme", floorMusic});
 							}
-							DBLua::DoMusic(floorMusic);
+							//DBLua::DoMusic(floorMusic);
 							
 						}
 						
@@ -622,9 +618,9 @@ void DatabaseLoader::GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 	AllNames.push_back("gml_Object_obj_boss_template_Step_0");
 	AllNames.push_back("gml_Object_obj_boss_template_Draw_0");
 	//Projectile data
-	AllNames.push_back("gml_Object_obj_bullet_type_Create_0");
-	AllNames.push_back("gml_Object_obj_bullet_type_Step_0");
-	AllNames.push_back("gml_Object_obj_bullet_type_Collision_obj_floor"); // CollideTile(proj, tile)
+	//AllNames.push_back("gml_Object_obj_bullet_type_Create_0");
+	//AllNames.push_back("gml_Object_obj_bullet_type_Step_0");
+	//AllNames.push_back("gml_Object_obj_bullet_type_Collision_obj_floor"); // CollideTile(proj, tile)
 	//Global data
 	AllNames.push_back("gml_Object_obj_view_Draw_73");
 	AllNames.push_back("gml_Object_obj_player_Draw_0");
@@ -793,6 +789,8 @@ void DatabaseLoader::GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 								}
 							}
 							// Projectile scripts
+
+							/*
 							if (tbl.get<string>("DataType") == "projectile")
 							{
 								// Create script
@@ -811,6 +809,8 @@ void DatabaseLoader::GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 									modState.at(stateNum)["all_behaviors"][var]["CollideWith"].call(InstanceID, OtherInstanceID);
 								}
 							}
+							*/
+
 							// Global scripts
 							if (tbl.get<string>("DataType") == "global")
 							{

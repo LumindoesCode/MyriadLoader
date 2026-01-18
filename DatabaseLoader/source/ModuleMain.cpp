@@ -132,9 +132,9 @@ static void RegisterData(lua_State* state, sol::table data)
 	{
 		if (!g_YYTKInterface->CallBuiltin("object_exists", { enemytype }))
 		{
-			string floorRooms = Files::GetModsDirectory() + data.get<string>("Rooms");
-			string floorRoomsDestiny = data.get<string>("RoomsDestination");
-			string roomsDirectory = "rooms/";
+			//string floorRooms = Files::GetModsDirectory() + data.get<string>("Rooms");
+			//string floorRoomsDestiny = data.get<string>("RoomsDestination");
+			//string roomsDirectory = "rooms/";
 
 			double bossList = data.get<double>("BossList");
 
@@ -246,11 +246,11 @@ sol::state DatabaseLoader::MakeModState()
 	inState["screen_center_y"] = 0;
 
 	inState["enemy_data"] = bind_one(DBLua::EnemyData, state_ptr);
-	inState["cartridge_data"] = bind_one(DBLua::CartridgeData, state_ptr);
+	//inState["cartridge_data"] = bind_one(DBLua::CartridgeData, state_ptr);
 	inState["projectile_data"] = bind_one(DBLua::ProjectileData, state_ptr);
 	inState["global_data"] = bind_one(DBLua::GlobalData, state_ptr);
 	inState["player_data"] = bind_one(DBLua::PlayerData, state_ptr);
-	inState["custom_floor"] = bind_one(DBLua::FloorData, state_ptr);
+	//inState["custom_floor"] = bind_one(DBLua::FloorData, state_ptr);
 
 	inState["register_data"] = bind_one(RegisterData, state_ptr);
 
