@@ -348,6 +348,7 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 	vector<string> AllNames;
 	//Alt floor shenanigans
 	AllNames.push_back("gml_Object_obj_nextlevel_Create_0");
+	AllNames.push_back("gml_Object_obj_savegame_manager_Create_0");
 	AllNames.push_back("gml_Object_obj_room_Create_0");
 	AllNames.push_back("gml_Object_obj_room_Step_0");
 	AllNames.push_back("gml_Object_obj_fakefloor_Create_0");
@@ -388,21 +389,21 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 
 				if (tbl.get<string>("DataType") == "floormap")
 				{
-
-					if ((string)Code->GetName() == (string)"gml_Object_obj_nextlevel_Create_0")
+					if ((string)Code->GetName() == (string)"gml_Object_obj_nextlevel_Create_0" || (string)Code->GetName() == (string)"gml_Object_obj_savegame_manager_Create_0" )
 					{
-
 						RValue floordsmap = g_YYTKInterface->CallBuiltin("ds_map_create", {});
 						g_YYTKInterface->CallBuiltin("ds_map_copy", { floordsmap, GMWrappers::GetGlobal("floormap_1") });
 						string floorRooms = Files::GetModsDirectory() + tbl.get<string>("Rooms");
-						string floorRoomsDestiny = tbl.get<string>("RoomsDestination");
-						string roomsDirectory = "rooms/";
-						double music;
+						string floorRoomsDestiny = tbl.get<string>("RoomsID");
 						static bool shouldQueueCustom = false;
 						static string customFloorName = "";
 						static int customFloorNumber = 0;
 						static string customFloorNumberFull = "";
 
+						string roomsDirectory = "rooms/";
+						string floorRoomsDirectoryDestiny = roomsDirectory.append(floorRoomsDestiny);
+
+						RValue roomsDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)floorRoomsDirectoryDestiny });
 
 						string floorRoomsDirectoryDestiny = roomsDirectory.append(floorRoomsDestiny);
 
@@ -412,18 +413,20 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 						//string* stringtogivetostarprov = new string(floorRoomsDestiny);
 
 						ifstream src(floorRooms);
-						ofstream  dst(roomsDestinyString.ToString());
+						ofstream dst(roomsDestinyString.ToString());
 						dst << src.rdbuf();
+						g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "layout", roomsDestinyString });
+
+						g_YYTKInterface->PrintInfo((string_view)floorRoomsDestiny);
 
 
 						g_YYTKInterface->CallBuiltin("ds_map_set", { floordsmap, "index", id });
 
+						//g_YYTKInterface->CallBuiltin("ds_map_add", { GMWrappers::GetGlobal("layout_map"), (string_view)floorRoomsDestiny, id });
+
 						g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "layout", roomsDestinyString });
 						g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "music", music });
 
-
-
-						music = tbl.get<double>("Music");
 
 						double bossList = tbl.get<double>("BossList");
 						
@@ -433,7 +436,7 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 							RValue bossListBosses = g_YYTKInterface->CallBuiltin("ds_list_create", {});
 
 							g_YYTKInterface->CallBuiltin("ds_list_add", { bossListBosses, bossList });
-
+							
 							g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "boss", bossListBosses});
 
 							//g_YYTKInterface->Print(CM_BRIGHTWHITE, bossListBosses.ToString());
@@ -477,6 +480,10 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 
 							}
 						}
+					}
+					if ((string)Code->GetName() == (string)"gml_Object_obj_savegame_manager_Create_0")
+					{
+						g_YYTKInterface->CallGameScript("gml_Script_load_room_files", {});
 					}
 
 					if (g_YYTKInterface->CallBuiltin("ds_map_find_value", { GMWrappers::GetGlobal("current_floormap"), "index" }).ToDouble() == id)
