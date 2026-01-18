@@ -211,7 +211,7 @@ RValue& DatabaseLoader::GMHooks::SpawnRoomObject(IN CInstance* Self, IN CInstanc
 	{
 		if (Arguments[2]->ToDouble() == Files::HashString(customEnemyNames[i]))
 		{
-			Result = DBLua::SpawnEnemy(Arguments[0]->ToDouble(), Arguments[1]->ToDouble(), customEnemyNames[i]);
+			Result = DBLua::SpawnObject(Arguments[0]->ToDouble(), Arguments[1]->ToDouble(), customEnemyNames[i]);
 			enemyFound = true;
 		}
 	}
@@ -219,7 +219,7 @@ RValue& DatabaseLoader::GMHooks::SpawnRoomObject(IN CInstance* Self, IN CInstanc
 	{
 		if (Arguments[2]->ToDouble() == Files::HashString(customMinibossNames[i]))
 		{
-			Result = DBLua::SpawnEnemy(Arguments[0]->ToDouble(), Arguments[1]->ToDouble(), customMinibossNames[i]);
+			Result = DBLua::SpawnObject(Arguments[0]->ToDouble(), Arguments[1]->ToDouble(), customMinibossNames[i]);
 			enemyFound = true;
 		}
 	}
