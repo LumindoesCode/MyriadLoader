@@ -25,6 +25,7 @@ static YYTK::YYTKInterface* yytk_interface = nullptr;
 void HandleBoss(int id, string bossName, sol::table data);
 void HandleMiniboss(int id, string minibossName);
 void HandleEnemy(int id, string enemyName);
+void HandleCartridges(string name, sol::table data);
 
 static sol::table CopyTableFromStateTo(sol::state& source, sol::state& target, sol::table table_to_copy) {
 
@@ -64,102 +65,43 @@ static void RegisterData(lua_State* state, sol::table data)
 	string getName = data.get<string>("Name");
 	string getType = data.get<string>("DataType");
 
-	if (getType == "enemy" && getName != "all")
+	if (!g_YYTKInterface->CallBuiltin("object_exists", { objectType }))
 	{
-		HandleEnemyType(getName, objectType, data);
-	}
-
-	if (getType == "cartridge" && getName != "all")
-	{
-		if (!g_YYTKInterface->CallBuiltin("object_exists", { objectType }))
+		if (getType == "enemy" && getName != "all")
 		{
-			string getShownName = data.get<string>("ShownName");
-			string getDescription = data.get<string>("Description");
-			int id = Files::HashString(getName);
-
-			if (std::find(customCartridgeNames.begin(), customCartridgeNames.end(), getName) == customCartridgeNames.end())
-			{
-
-				g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), id, id });
-				g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("cart_name"), id, g_YYTKInterface->CallBuiltin("array_create", { 2, (string_view)getShownName })});
-				g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("cart_desc"), id, g_YYTKInterface->CallBuiltin("array_create", { 2, (string_view)getDescription })});
-
-				customCartridgeNames.push_back(getName);
-
-
-				g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created cartridge '" + getName + "' with numeric ID: " + to_string(id));
-			}
+			HandleEnemyType(getName, data);
 		}
-	}
 
-	if (getType == "floormap" && getName != "all")
-	{
-		if (!g_YYTKInterface->CallBuiltin("object_exists", { objectType }))
+		if (getType == "cartridge" && getName != "all")
 		{
-			//string floorRooms = Files::GetModsDirectory() + data.get<string>("Rooms");
-			//string floorRoomsDestiny = data.get<string>("RoomsDestination");
-			//string roomsDirectory = "rooms/";
-
-			double bossList = data.get<double>("BossList");
-
-			int id = Files::HashString(getName);
-
-			if (std::find(customFloorNames.begin(), customFloorNames.end(), getName) == customFloorNames.end())
-			{
-				RValue floordsmap = g_YYTKInterface->CallBuiltin("ds_map_create", {});
-				string floormapnum = "floormap_" + to_string(data.get<int>("Floor"));
-
-				g_YYTKInterface->CallBuiltin("ds_map_set", { floordsmap, "index", id });
-
-				/*
-				if (bossList > 0 && g_YYTKInterface->CallBuiltin("ds_map_find_value", { GMWrappers::GetGlobal("current_floormap"), "index" }).ToDouble() == g_YYTKInterface->CallBuiltin("ds_map_find_value", { floordsmap, "index" }).ToDouble())
-				{
-					string bossListNum = "bosslist_" + to_string(data.get<int>("Floor"));
-					RValue bossListCopy = g_YYTKInterface->CallBuiltin("ds_list_copy", { bossListCopy, GMWrappers::GetGlobal(bossListNum) });
-
-					g_YYTKInterface->CallBuiltin("ds_list_clear", { GMWrappers::GetGlobal(bossListNum) });
-					g_YYTKInterface->CallBuiltin("ds_list_add", { GMWrappers::GetGlobal(bossListNum), bossList});
-
-					g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "boss", (string_view)bossListNum});
-				}*/
-
-				if (g_YYTKInterface->CallBuiltin("variable_global_exists", { (string_view)floormapnum }))
-				{
-					g_YYTKInterface->CallBuiltin("ds_map_set", { GMWrappers::GetGlobal(floormapnum), "next", floordsmap});
-					g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Floor '" + getName + "' (numeric ID " + to_string(id) + ") implemented for floor " + to_string(data.get<int>("Floor")));
-				}
-				else
-				{
-					g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created floor '" + getName + "' with numeric ID: " + to_string(id) + " using custom spawning logic");
-				}
-
-
-				customFloorNames.push_back(getName);
-			}
+			HandleCartridges(getName, data);
 		}
-	}
+
+		if (getType == "floormap" && getName != "all")
+		{
+			HandleFloormap(getName, data);
+		}
+    }
 
 }
 
+#pragma region HandleEnemies
 //Processes EnemyData and sorts it to the correct list.
-void HandleEnemyType(string enemyName, RValue enemyType, sol::table data) 
+void HandleEnemyType(string enemyName, sol::table data) 
 {
-	if (!g_YYTKInterface->CallBuiltin("object_exists", { enemyType }))
-	{
-		int id = Files::HashString(enemyName);
+	int id = Files::HashString(enemyName);
 		
-		if (data.get<bool>("Boss") == true)
-		{
-			HandleBoss(id, enemyName, data);
-		}
-		else if (data.get<bool>("Miniboss") == true)
-		{
-			HandleMiniboss(id, enemyName);
-		}
-		else if (std::find(customEnemyNames.begin(), customEnemyNames.end(), enemyName) == customEnemyNames.end())
-		{
+	if (data.get<bool>("Boss") == true)
+	{
+		HandleBoss(id, enemyName, data);
+	}
+	else if (data.get<bool>("Miniboss") == true)
+	{
+		HandleMiniboss(id, enemyName);
+	}
+	else if (std::find(customEnemyNames.begin(), customEnemyNames.end(), enemyName) == customEnemyNames.end())
+	{
 			HandleEnemy(id, enemyName);
-		}
 	}
 }
 
@@ -203,6 +145,79 @@ void HandleEnemy(int id, string enemyName)
 	customEnemyNames.push_back(enemyName);
 	g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created enemy '" + enemyName + "' with numeric ID: " + to_string(id));
 }
+#pragma endregion HandleEnemies
+
+//Adds a cartridge data to the game.
+void HandleCartridges(string name, sol::table data)
+{
+	string getShownName = data.get<string>("ShownName");
+	string getDescription = data.get<string>("Description");
+	int id = Files::HashString(name);
+
+	if (std::find(customCartridgeNames.begin(), customCartridgeNames.end(), name) == customCartridgeNames.end())
+	{
+
+		g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), id, id });
+		g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("cart_name"), id, g_YYTKInterface->CallBuiltin("array_create", { 2, (string_view)getShownName }) });
+		g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("cart_desc"), id, g_YYTKInterface->CallBuiltin("array_create", { 2, (string_view)getDescription }) });
+
+		customCartridgeNames.push_back(name);
+
+
+		g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created cartridge '" + name + "' with numeric ID: " + to_string(id));
+	}
+}
+
+//Adds a custom floor data to the game.
+void HandleFloormap(string floorName, sol::table data)
+{
+	
+	
+		//string floorRooms = Files::GetModsDirectory() + data.get<string>("Rooms");
+		//string floorRoomsDestiny = data.get<string>("RoomsDestination");
+		//string roomsDirectory = "rooms/";
+
+		double bossList = data.get<double>("BossList");
+
+		int id = Files::HashString(floorName);
+
+		if (std::find(customFloorNames.begin(), customFloorNames.end(), floorName) == customFloorNames.end())
+		{
+			RValue floordsmap = g_YYTKInterface->CallBuiltin("ds_map_create", {});
+			string floormapnum = "floormap_" + to_string(data.get<int>("Floor"));
+
+			g_YYTKInterface->CallBuiltin("ds_map_set", { floordsmap, "index", id });
+
+			/*
+			if (bossList > 0 && g_YYTKInterface->CallBuiltin("ds_map_find_value", { GMWrappers::GetGlobal("current_floormap"), "index" }).ToDouble() == g_YYTKInterface->CallBuiltin("ds_map_find_value", { floordsmap, "index" }).ToDouble())
+			{
+				string bossListNum = "bosslist_" + to_string(data.get<int>("Floor"));
+				RValue bossListCopy = g_YYTKInterface->CallBuiltin("ds_list_copy", { bossListCopy, GMWrappers::GetGlobal(bossListNum) });
+
+				g_YYTKInterface->CallBuiltin("ds_list_clear", { GMWrappers::GetGlobal(bossListNum) });
+				g_YYTKInterface->CallBuiltin("ds_list_add", { GMWrappers::GetGlobal(bossListNum), bossList});
+
+				g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "boss", (string_view)bossListNum});
+			}*/
+
+			if (g_YYTKInterface->CallBuiltin("variable_global_exists", { (string_view)floormapnum }))
+			{
+				g_YYTKInterface->CallBuiltin("ds_map_set", { GMWrappers::GetGlobal(floormapnum), "next", floordsmap });
+				g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Floor '" + floorName + "' (numeric ID " + to_string(id) + ") implemented for floor " + to_string(data.get<int>("Floor")));
+			}
+			else
+			{
+				g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created floor '" + floorName + "' with numeric ID: " + to_string(id) + " using custom spawning logic");
+			}
+
+
+			customFloorNames.push_back(floorName);
+		}
+	
+}
+
+
+
 
 void DatabaseLoader::UnloadMods()
 {
