@@ -14,9 +14,11 @@ namespace DatabaseLoader
 	inline bool loadingMods = true;
 	void UnloadMods();
 	void LoadMods();
+	
 	sol::state MakeModState();
 	int LoadFileRequire(lua_State* L);
 	class ModuleMain
 	{
+		
 	};
 }

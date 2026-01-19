@@ -22,6 +22,9 @@ using namespace DatabaseLoader;
 
 static DLInterface* dl_interface = nullptr;
 static YYTK::YYTKInterface* yytk_interface = nullptr;
+void HandleBoss(int id, string bossName, sol::table data);
+void HandleMiniboss(int id, string minibossName);
+void HandleEnemy(int id, string enemyName);
 
 static sol::table CopyTableFromStateTo(sol::state& source, sol::state& target, sol::table table_to_copy) {
 
@@ -56,58 +59,19 @@ static void RegisterData(lua_State* state, sol::table data)
 
 	tbl[tbl.size() + 1] = data;
 
-	RValue enemytype = g_YYTKInterface->CallBuiltin("asset_get_index", { (string_view)data.get<string>("Name") });
+	RValue objectType = g_YYTKInterface->CallBuiltin("asset_get_index", { (string_view)data.get<string>("Name") });
 
 	string getName = data.get<string>("Name");
 	string getType = data.get<string>("DataType");
 
 	if (getType == "enemy" && getName != "all")
 	{
-		if (!g_YYTKInterface->CallBuiltin("object_exists", { enemytype }))
-		{
-			int id = Files::HashString(getName);
-
-			if (data.get<bool>("Boss") == true)
-			{
-				if (std::find(customBossNames.begin(), customBossNames.end(), getName) == customBossNames.end())
-				{
-					g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), id, id });
-					customBossNames.push_back(getName);
-
-					string bosslist = "bosslist_" + to_string(data.get<int>("BossFloor"));
-
-					if (g_YYTKInterface->CallBuiltin("variable_global_exists", { (string_view)bosslist }))
-					{
-						g_YYTKInterface->CallBuiltin("ds_list_add", { GMWrappers::GetGlobal(bosslist), id });
-						g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Boss '" + getName + "' (numeric ID " + to_string(id) + ") implemented for floor " + to_string(data.get<int>("BossFloor")));
-					}
-					else
-					{
-						g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created boss '" + getName + "' with numeric ID: " + to_string(id) + " using custom spawning logic");
-					}
-				}
-			}
-			else if (data.get<bool>("Miniboss") == true)
-			{
-				if (std::find(customMinibossNames.begin(), customMinibossNames.end(), getName) == customMinibossNames.end())
-				{
-					g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), id, id });
-					customMinibossNames.push_back(getName);
-					g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created miniboss '" + getName + "' with numeric ID: " + to_string(id));
-				}
-			}
-			else if (std::find(customEnemyNames.begin(), customEnemyNames.end(), getName) == customEnemyNames.end())
-			{
-				g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), id, id });
-				customEnemyNames.push_back(getName);
-				g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created enemy '" + getName + "' with numeric ID: " + to_string(id));
-			}
-		}
+		HandleEnemyType(getName, objectType, data);
 	}
 
 	if (getType == "cartridge" && getName != "all")
 	{
-		if (!g_YYTKInterface->CallBuiltin("object_exists", { enemytype }))
+		if (!g_YYTKInterface->CallBuiltin("object_exists", { objectType }))
 		{
 			string getShownName = data.get<string>("ShownName");
 			string getDescription = data.get<string>("Description");
@@ -130,7 +94,7 @@ static void RegisterData(lua_State* state, sol::table data)
 
 	if (getType == "floormap" && getName != "all")
 	{
-		if (!g_YYTKInterface->CallBuiltin("object_exists", { enemytype }))
+		if (!g_YYTKInterface->CallBuiltin("object_exists", { objectType }))
 		{
 			//string floorRooms = Files::GetModsDirectory() + data.get<string>("Rooms");
 			//string floorRoomsDestiny = data.get<string>("RoomsDestination");
@@ -175,6 +139,69 @@ static void RegisterData(lua_State* state, sol::table data)
 		}
 	}
 
+}
+
+//Processes EnemyData and sorts it to the correct list.
+void HandleEnemyType(string enemyName, RValue enemyType, sol::table data) 
+{
+	if (!g_YYTKInterface->CallBuiltin("object_exists", { enemyType }))
+	{
+		int id = Files::HashString(enemyName);
+		
+		if (data.get<bool>("Boss") == true)
+		{
+			HandleBoss(id, enemyName, data);
+		}
+		else if (data.get<bool>("Miniboss") == true)
+		{
+			HandleMiniboss(id, enemyName);
+		}
+		else if (std::find(customEnemyNames.begin(), customEnemyNames.end(), enemyName) == customEnemyNames.end())
+		{
+			HandleEnemy(id, enemyName);
+		}
+	}
+}
+
+//Adds a custom boss data to the game.
+void HandleBoss(int id, string bossName, sol::table data)
+{
+	if (std::find(customBossNames.begin(), customBossNames.end(), bossName) == customBossNames.end())
+	{
+		g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), id, id });
+		customBossNames.push_back(bossName);
+
+		string bosslist = "bosslist_" + to_string(data.get<int>("BossFloor"));
+
+		if (g_YYTKInterface->CallBuiltin("variable_global_exists", { (string_view)bosslist }))
+		{
+			g_YYTKInterface->CallBuiltin("ds_list_add", { GMWrappers::GetGlobal(bosslist), id });
+			g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Boss '" + bossName + "' (numeric ID " + to_string(id) + ") implemented for floor " + to_string(data.get<int>("BossFloor")));
+		}
+		else
+		{
+			g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created boss '" + bossName + "' with numeric ID: " + to_string(id) + " using custom spawning logic");
+		}
+	}
+}
+
+//Adds a custom miniboss data to the game.
+void HandleMiniboss(int id, string minibossName) 
+{
+	if (std::find(customMinibossNames.begin(), customMinibossNames.end(), minibossName) == customMinibossNames.end())
+	{
+		g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), id, id });
+		customMinibossNames.push_back(minibossName);
+		g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created miniboss '" + minibossName + "' with numeric ID: " + to_string(id));
+	}
+}
+
+//Adds a custom enemy data to the game.
+void HandleEnemy(int id, string enemyName) 
+{
+	g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), id, id });
+	customEnemyNames.push_back(enemyName);
+	g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created enemy '" + enemyName + "' with numeric ID: " + to_string(id));
 }
 
 void DatabaseLoader::UnloadMods()

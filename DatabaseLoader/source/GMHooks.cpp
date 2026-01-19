@@ -37,7 +37,7 @@ sol::lua_value ValueToObjectGMH(RValue obj)
 	}
 }
 
-RValue& DatabaseLoader::GMHooks::JukeboxInjection(
+RValue& GMHooks::JukeboxInjection(
 	IN CInstance* Self,
 	IN CInstance* Other,
 	OUT RValue& Result,
@@ -57,7 +57,7 @@ RValue& DatabaseLoader::GMHooks::JukeboxInjection(
 	return Result;
 }
 
-RValue& DatabaseLoader::GMHooks::MusicDo(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+RValue& GMHooks::MusicDo(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&MusicDo)>(MmGetHookTrampoline(g_ArSelfModule, "MusicDo"));
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
@@ -77,7 +77,7 @@ RValue& DatabaseLoader::GMHooks::MusicDo(IN CInstance* Self, IN CInstance* Other
 	return Result;
 }
 
-RValue& DatabaseLoader::GMHooks::MusicDoLoop(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+RValue& GMHooks::MusicDoLoop(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&MusicDoLoop)>(MmGetHookTrampoline(g_ArSelfModule, "MusicDoLoop"));
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
@@ -88,7 +88,7 @@ RValue& DatabaseLoader::GMHooks::MusicDoLoop(IN CInstance* Self, IN CInstance* O
 	return Result;
 }
 
-RValue& DatabaseLoader::GMHooks::MusicDoLoopFromStart(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+RValue& GMHooks::MusicDoLoopFromStart(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&MusicDoLoopFromStart)>(MmGetHookTrampoline(g_ArSelfModule, "MusicDoLoopFromStart"));
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
@@ -109,8 +109,13 @@ RValue& DatabaseLoader::GMHooks::MusicDoLoopFromStart(IN CInstance* Self, IN CIn
 	return Result;
 }
 
-RValue& DatabaseLoader::GMHooks::EnemyDamage(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+#pragma region EnemyHandling
+
+
+
+RValue& GMHooks::EnemyDamage(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
+	//Gets this function.
 	auto original_function = reinterpret_cast<decltype(&EnemyDamage)>(MmGetHookTrampoline(g_ArSelfModule, "EnemyDamage"));
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
 
@@ -154,6 +159,9 @@ RValue& DatabaseLoader::GMHooks::EnemyDamage(IN CInstance* Self, IN CInstance* O
 	return Result;
 }
 
+
+
+#pragma endregion EnemyHandling
 RValue& DatabaseLoader::GMHooks::PlayerTakeHit(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&PlayerTakeHit)>(MmGetHookTrampoline(g_ArSelfModule, "PlayerTakeHit"));
@@ -192,7 +200,7 @@ RValue& DatabaseLoader::GMHooks::PlayerTakeHit(IN CInstance* Self, IN CInstance*
 }
 
 
-RValue& DatabaseLoader::GMHooks::ReloadAllMods(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+RValue& GMHooks::ReloadAllMods(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&ReloadAllMods)>(MmGetHookTrampoline(g_ArSelfModule, "ReloadAllMods"));
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
@@ -203,7 +211,7 @@ RValue& DatabaseLoader::GMHooks::ReloadAllMods(IN CInstance* Self, IN CInstance*
 	return return_value;
 }
 
-RValue& DatabaseLoader::GMHooks::SpawnRoomObject(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+RValue& GMHooks::SpawnRoomObject(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&SpawnRoomObject)>(MmGetHookTrampoline(g_ArSelfModule, "SpawnRoomObject"));
 	bool enemyFound = false;
@@ -239,7 +247,7 @@ RValue& DatabaseLoader::GMHooks::SpawnRoomObject(IN CInstance* Self, IN CInstanc
 	return Result;
 }
 
-RValue& DatabaseLoader::GMHooks::WriteSaveData(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+RValue& GMHooks::WriteSaveData(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	g_YYTKInterface->CallBuiltin("array_resize", { GMWrappers::GetGlobal("gen_list"), 289 });
 
@@ -259,7 +267,7 @@ RValue& DatabaseLoader::GMHooks::WriteSaveData(IN CInstance* Self, IN CInstance*
 	return Result;
 }
 
-RValue& DatabaseLoader::GMHooks::WriteMidSave(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+RValue& GMHooks::WriteMidSave(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	g_YYTKInterface->CallBuiltin("array_resize", { GMWrappers::GetGlobal("gen_list"), 289 });
 
@@ -276,7 +284,7 @@ RValue& DatabaseLoader::GMHooks::WriteMidSave(IN CInstance* Self, IN CInstance* 
 	return Result;
 }
 
-RValue& DatabaseLoader::GMHooks::ExitGame(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+RValue& GMHooks::ExitGame(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&ExitGame)>(MmGetHookTrampoline(g_ArSelfModule, "ExitGame"));
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
@@ -284,7 +292,7 @@ RValue& DatabaseLoader::GMHooks::ExitGame(IN CInstance* Self, IN CInstance* Othe
 	return Result;
 }
 
-RValue& DatabaseLoader::GMHooks::EnterRun(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+RValue& GMHooks::EnterRun(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&EnterRun)>(MmGetHookTrampoline(g_ArSelfModule, "EnterRun"));
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
@@ -292,7 +300,7 @@ RValue& DatabaseLoader::GMHooks::EnterRun(IN CInstance* Self, IN CInstance* Othe
 	return Result;
 }
 
-RValue& DatabaseLoader::GMHooks::ChooseBossIntro(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+RValue& GMHooks::ChooseBossIntro(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&ChooseBossIntro)>(MmGetHookTrampoline(g_ArSelfModule, "ChooseBossIntro"));
 	bool shouldSpawnCustom = false;
@@ -602,7 +610,7 @@ static void SpawnBossLogic(FWCodeEvent& FunctionContext, CCode* Code) {
 }
 
 
-void DatabaseLoader::GMHooks::EnemyData(FWCodeEvent& FunctionContext)
+void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 {
 	vector<string> AllNames;
 	//Enemy data
@@ -834,7 +842,7 @@ void DatabaseLoader::GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 }
 
 
-void DatabaseLoader::GMHooks::CartridgeData(FWCodeEvent& FunctionContext) {
+void GMHooks::CartridgeData(FWCodeEvent& FunctionContext) {
 	vector<string> AllNames;
 
 	AllNames.push_back("gml_Object_obj_cartridge_Create_0");
