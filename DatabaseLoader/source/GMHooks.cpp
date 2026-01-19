@@ -405,10 +405,6 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 
 						RValue roomsDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)floorRoomsDirectoryDestiny });
 
-						string floorRoomsDirectoryDestiny = roomsDirectory.append(floorRoomsDestiny);
-
-						RValue roomsDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)floorRoomsDirectoryDestiny });
-
 						//thank orio prisco for this
 						//string* stringtogivetostarprov = new string(floorRoomsDestiny);
 
@@ -424,7 +420,6 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 
 						//g_YYTKInterface->CallBuiltin("ds_map_add", { GMWrappers::GetGlobal("layout_map"), (string_view)floorRoomsDestiny, id });
 
-						g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "layout", roomsDestinyString });
 						g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "music", music });
 
 
