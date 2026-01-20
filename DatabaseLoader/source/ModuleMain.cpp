@@ -944,12 +944,14 @@ EXPORTED AurieStatus ModuleInitialize(
 	RegisterHooks(Module);
 	LoadMods();
 	
-
+	
 	g_YYTKInterface->CallBuiltin("instance_activate_all", {});
-
+	g_YYTKInterface->PrintWarning("Mods Loaded");
 	//TODO: check that the array functions do not already work
 	//check that the value being overriden is 0
 	//check that array functions work after the override
+
+	//Allows YYTK to correctly read GameMaker tables.
 	g_YYTKInterface->PrintWarning("I'm about to do some sketchy stuff !");
 	*(int64_t*)((char *)g_YYTKInterface + 0x3C0) = 0x90;
 
