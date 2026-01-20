@@ -25,7 +25,10 @@ static YYTK::YYTKInterface* yytk_interface = nullptr;
 void HandleBoss(int id, string bossName, sol::table data);
 void HandleMiniboss(int id, string minibossName);
 void HandleEnemy(int id, string enemyName);
+void HandleEnemyType(string enemyName, sol::table data);
+void HandleFloormap(string floorName, sol::table data);
 void HandleCartridges(string name, sol::table data);
+void ClearData();
 
 static sol::table CopyTableFromStateTo(sol::state& source, sol::state& target, sol::table table_to_copy) {
 
@@ -53,6 +56,7 @@ string GetUserDirectory() {
 string bossListNum;
 RValue bossListCopy;
 
+#pragma region DataHandling
 static void RegisterData(lua_State* state, sol::table data)
 {
 	sol::state_view sview(state);
@@ -216,9 +220,6 @@ void HandleFloormap(string floorName, sol::table data)
 	
 }
 
-
-
-
 void DatabaseLoader::UnloadMods()
 {
 	for (size_t i = 0; i < modState.size(); i++)
@@ -237,7 +238,11 @@ void DatabaseLoader::UnloadMods()
 		g_YYTKInterface->CallBuiltin("ds_list_copy", { GMWrappers::GetGlobal(bossListNum), bossListCopy });
 	}
 
+	ClearData();
+}
 
+void ClearData() 
+{
 	roomFiles.clear();
 	customEnemyNames.clear();
 	customMinibossNames.clear();
@@ -246,6 +251,7 @@ void DatabaseLoader::UnloadMods()
 	customFloorNames.clear();
 	modState.clear();
 }
+#pragma endregion DataHandling
 
 // Helper to bind the state_ptr and pass functions to lua
 // Sol is unable to properly examine the result std::bind front
@@ -698,6 +704,7 @@ void DatabaseLoader::LoadMods()
 	loadingMods = false;
 }
 
+//Handle all hooks attached to Star of Providence.
 static void RegisterHooks(AurieModule* Module) {
 	yytk_interface->CreateCallback(
 		Module,
@@ -934,8 +941,9 @@ EXPORTED AurieStatus ModuleInitialize(
 
 	g_YYTKInterface->CallBuiltin("instance_deactivate_object", { g_YYTKInterface->CallBuiltin("asset_get_index", {"obj_intro"}) });
 
-	LoadMods();
 	RegisterHooks(Module);
+	LoadMods();
+	
 
 	g_YYTKInterface->CallBuiltin("instance_activate_all", {});
 
