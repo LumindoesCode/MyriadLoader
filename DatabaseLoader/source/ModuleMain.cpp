@@ -31,6 +31,11 @@ void HandleCartridges(string name, sol::table data);
 void GamestateBehaviorRun(size_t currentState);
 void ScreenBehaviorRun(CInstance* currentInstance, size_t currentState);
 void PlayerBehaviorRun(size_t currentState);
+void CheckForAllBehavior(size_t currentState);
+void SortAllBehaviors(sol::table allBehaviors, size_t currentState);
+void HandleAllExistingTypes(sol::table allBehaviorsParameters);
+void HandleAllEnemyTypes(sol::table allBehaviorParameters);
+void HandleGlobalTypes(sol::table tbl, double var, size_t currentState);
 void ClearData();
 
 static sol::table CopyTableFromStateTo(sol::state& source, sol::state& target, sol::table table_to_copy) {
@@ -76,6 +81,7 @@ static void RegisterData(lua_State* state, sol::table data)
 	{
 		if (getType == "enemy" && getName != "all")
 		{
+			
 			HandleEnemyType(getName, data);
 		}
 
@@ -108,7 +114,7 @@ void HandleEnemyType(string enemyName, sol::table data)
 	}
 	else if (std::find(customEnemyNames.begin(), customEnemyNames.end(), enemyName) == customEnemyNames.end())
 	{
-			HandleEnemy(id, enemyName);
+		HandleEnemy(id, enemyName);
 	}
 }
 
@@ -519,22 +525,22 @@ void CheckForAllBehavior(size_t currentState)
 	if (modState.at(currentState)["all_behaviors"])
 	{
 		sol::table count = modState.at(currentState)["all_behaviors"];
-		SortAllBehaviors(count);
+		SortAllBehaviors(count, currentState);
 	}
 }
 
 //Sorts the "All Behavior" to the right data type.
-void SortAllBehaviors(sol::table allBehaviors) 
+void SortAllBehaviors(sol::table allBehaviors, size_t currentState) 
 {
 	for (double var = 0; var < allBehaviors.size() + 1; var++)
 	{
 		sol::table tbl = modState.at(currentState)["all_behaviors"][var];
 		if (modState.at(currentState)["all_behaviors"][var])
 		{
-
+			
 			HandleAllExistingTypes(tbl);
 			HandleAllEnemyTypes(tbl);
-			HandleGlobalTypes(tbl);
+			HandleGlobalTypes(tbl, var, currentState);
 			
 		}
 	}
@@ -560,12 +566,13 @@ void HandleAllEnemyTypes(sol::table allBehaviorParameters)
 		if (allBehaviorParameters.get<string>("DataType") == "enemy")
 		{
 			DBLua::InvokeWithObjectIndex("obj_enemy", allBehaviorParameters["Step"]);
+			
 		}
 	}
 }
 
 //Handles global behaviors 
-void HandleGlobalTypes(sol::table tbl) 
+void HandleGlobalTypes(sol::table tbl, double var, size_t currentState) 
 {
 	if (tbl.get<string>("DataType") == "global")
 	{
@@ -994,19 +1001,28 @@ EXPORTED AurieStatus ModuleInitialize(
 
 	g_YYTKInterface->CallBuiltin("instance_deactivate_object", { g_YYTKInterface->CallBuiltin("asset_get_index", {"obj_intro"}) });
 
-	RegisterHooks(Module);
+
 	LoadMods();
+
+	do 
+	{
+		//Nothin
+	} while (loadingMods = false);
+
+	RegisterHooks(Module);
 	
 	
-	g_YYTKInterface->CallBuiltin("instance_activate_all", {});
-	g_YYTKInterface->PrintWarning("Mods Loaded");
 	//TODO: check that the array functions do not already work
 	//check that the value being overriden is 0
 	//check that array functions work after the override
 
 	//Allows YYTK to correctly read GameMaker tables.
 	g_YYTKInterface->PrintWarning("I'm about to do some sketchy stuff !");
-	*(int64_t*)((char *)g_YYTKInterface + 0x3C0) = 0x90;
+	*(int64_t*)((char*)g_YYTKInterface + 0x3C0) = 0x90;
+
+	g_YYTKInterface->CallBuiltin("instance_activate_all", {});
+	g_YYTKInterface->PrintWarning("Mods Loaded");
+	
 
 	return AURIE_SUCCESS;
 }
