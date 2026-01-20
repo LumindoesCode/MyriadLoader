@@ -28,6 +28,9 @@ void HandleEnemy(int id, string enemyName);
 void HandleEnemyType(string enemyName, sol::table data);
 void HandleFloormap(string floorName, sol::table data);
 void HandleCartridges(string name, sol::table data);
+void GamestateBehaviorRun(size_t currentState);
+void ScreenBehaviorRun(CInstance* currentInstance, size_t currentState);
+void PlayerBehaviorRun(size_t currentState);
 void ClearData();
 
 static sol::table CopyTableFromStateTo(sol::state& source, sol::state& target, sol::table table_to_copy) {
@@ -448,80 +451,130 @@ static void RestoreRoomFiles()
 	}
 }
 
+#pragma region ObjectBehaviors
+//Handles Code of Injected Objects
 void ObjectBehaviorRun(FWFrame& context)
 {
 	UNREFERENCED_PARAMETER(context);
-
 	CInstance* GlobalInstance;
-
-	RValue view;
 	g_YYTKInterface->GetGlobalInstance(&GlobalInstance);
-
-	g_YYTKInterface->GetBuiltin("view_current", GlobalInstance, 0, view);
-
-	RValue viewCamera = g_YYTKInterface->CallBuiltin("view_get_camera", { view });
 	
 	for (size_t stateNum = 0; stateNum < modState.size(); stateNum++)
 	{
 		g_YYTKInterface->CallBuiltin("audio_sound_gain", { GMWrappers::GetGlobal("current_music"), GMWrappers::GetGlobal("volume_music"), 0 });
-
-		modState.at(stateNum)["hard_mode"] = GMWrappers::GetGlobal("hardmode").ToBoolean();
-		modState.at(stateNum)["paused"] = g_YYTKInterface->CallBuiltin("instance_exists", { g_YYTKInterface->CallBuiltin("asset_get_index", {"obj_pause"})}).ToBoolean();
-		modState.at(stateNum)["loop"] = GMWrappers::GetGlobal("game_loop");
-		modState.at(stateNum)["view_x"] = g_YYTKInterface->CallBuiltin("camera_get_view_x", { viewCamera }).ToDouble();
-		modState.at(stateNum)["screen_center_x"] = modState.at(stateNum).get<double>("view_x") + 120;
-		modState.at(stateNum)["view_y"] = g_YYTKInterface->CallBuiltin("camera_get_view_y", { viewCamera }).ToDouble();
-		modState.at(stateNum)["screen_center_y"] = modState.at(stateNum).get<double>("view_y") + 160;
-
-		RValue playerAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_player" });
-		RValue player = g_YYTKInterface->CallBuiltin("instance_find", { playerAsset, 0 });
-
-		modState.at(stateNum)["player_dead"] = false;
-
-		if (g_YYTKInterface->CallBuiltin("instance_exists", {player.ToDouble()}))
-		{
-			modState.at(stateNum)["player"] = player.ToDouble();
-			modState.at(stateNum)["player_x"] = g_YYTKInterface->CallBuiltin("variable_instance_get", { player, "x" }).ToDouble();
-			modState.at(stateNum)["player_y"] = g_YYTKInterface->CallBuiltin("variable_instance_get", { player, "y" }).ToDouble();
-		}
-		else
-		{
-			modState.at(stateNum)["player_dead"] = true;
-		}
-
-		if (modState.at(stateNum)["all_behaviors"])
-		{
-			sol::table count = modState.at(stateNum)["all_behaviors"];
-			for (double var = 0; var < count.size() + 1; var++)
-			{
-				sol::table tbl = modState.at(stateNum)["all_behaviors"][var];
-				if (modState.at(stateNum)["all_behaviors"][var])
-				{
-					if (g_YYTKInterface->CallBuiltin("object_exists", {g_YYTKInterface->CallBuiltin("asset_get_index", {(string_view)tbl.get<string>("Name")})}))
-					{
-						if (tbl.get<string>("DataType") == "enemy" || tbl.get<string>("DataType") == "projectile")
-						{
-							DBLua::InvokeWithObjectIndex(tbl.get<string>("Name"), tbl["Step"]);
-						}
-					}
-
-					if (tbl.get<string>("Name") == "all")
-					{
-						if (tbl.get<string>("DataType") == "enemy")
-						{
-							DBLua::InvokeWithObjectIndex("obj_enemy", tbl["Step"]);
-						}
-					}
-
-					if (tbl.get<string>("DataType") == "global")
-					{
-						modState.at(stateNum)["all_behaviors"][var]["Step"].call();
-					}
-				}
-			}
-		}
+		GamestateBehaviorRun(stateNum);
+		ScreenBehaviorRun(GlobalInstance, stateNum);
+		PlayerBehaviorRun(stateNum);
+		CheckForAllBehavior(stateNum);
 	}
 };
+
+#pragma region SingleBehaviors
+//Handles the game states (loop, hardmode, pause...)
+void GamestateBehaviorRun(size_t currentState) 
+{
+	modState.at(currentState)["hard_mode"] = GMWrappers::GetGlobal("hardmode").ToBoolean();
+	modState.at(currentState)["paused"] = g_YYTKInterface->CallBuiltin("instance_exists", { g_YYTKInterface->CallBuiltin("asset_get_index", {"obj_pause"}) }).ToBoolean();
+	modState.at(currentState)["loop"] = GMWrappers::GetGlobal("game_loop");
+}
+
+//Handles the current ScreenView
+void ScreenBehaviorRun(CInstance* currentInstance, size_t currentState) 
+{
+	RValue view;
+	g_YYTKInterface->GetBuiltin("view_current", currentInstance, 0, view);
+	RValue viewCamera = g_YYTKInterface->CallBuiltin("view_get_camera", { view });
+
+	modState.at(currentState)["view_x"] = g_YYTKInterface->CallBuiltin("camera_get_view_x", { viewCamera }).ToDouble();
+	modState.at(currentState)["screen_center_x"] = modState.at(currentState).get<double>("view_x") + 120;
+	modState.at(currentState)["view_y"] = g_YYTKInterface->CallBuiltin("camera_get_view_y", { viewCamera }).ToDouble();
+	modState.at(currentState)["screen_center_y"] = modState.at(currentState).get<double>("view_y") + 160;
+}
+
+//Handles the current Player
+void PlayerBehaviorRun(size_t currentState) 
+{
+	RValue playerAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_player" });
+	RValue player = g_YYTKInterface->CallBuiltin("instance_find", { playerAsset, 0 });
+
+	modState.at(currentState)["player_dead"] = false;
+
+	if (g_YYTKInterface->CallBuiltin("instance_exists", { player.ToDouble() }))
+	{
+		modState.at(currentState)["player"] = player.ToDouble();
+		modState.at(currentState)["player_x"] = g_YYTKInterface->CallBuiltin("variable_instance_get", { player, "x" }).ToDouble();
+		modState.at(currentState)["player_y"] = g_YYTKInterface->CallBuiltin("variable_instance_get", { player, "y" }).ToDouble();
+	}
+	else
+	{
+		modState.at(currentState)["player_dead"] = true;
+	}
+}
+
+#pragma endregion SingleBehaviors
+#pragma region AllBehaviors
+//Checks if the received state is an All Behavior.
+void CheckForAllBehavior(size_t currentState)
+{
+	if (modState.at(currentState)["all_behaviors"])
+	{
+		sol::table count = modState.at(currentState)["all_behaviors"];
+		SortAllBehaviors(count);
+	}
+}
+
+//Sorts the "All Behavior" to the right data type.
+void SortAllBehaviors(sol::table allBehaviors) 
+{
+	for (double var = 0; var < allBehaviors.size() + 1; var++)
+	{
+		sol::table tbl = modState.at(currentState)["all_behaviors"][var];
+		if (modState.at(currentState)["all_behaviors"][var])
+		{
+
+			HandleAllExistingTypes(tbl);
+			HandleAllEnemyTypes(tbl);
+			HandleGlobalTypes(tbl);
+			
+		}
+	}
+}
+
+//Handles all the existing types in Star of Providence, enemies and projectiles alike.
+void HandleAllExistingTypes(sol::table allBehaviorsParameters)
+{
+	if (g_YYTKInterface->CallBuiltin("object_exists", { g_YYTKInterface->CallBuiltin("asset_get_index", {(string_view)allBehaviorsParameters.get<string>("Name")}) }))
+	{
+		if (allBehaviorsParameters.get<string>("DataType") == "enemy" || allBehaviorsParameters.get<string>("DataType") == "projectile")
+		{
+			DBLua::InvokeWithObjectIndex(allBehaviorsParameters.get<string>("Name"), allBehaviorsParameters["Step"]);
+		}
+	}
+}
+
+//Handles "All Behaviors" for enemy types
+void HandleAllEnemyTypes(sol::table allBehaviorParameters) 
+{
+	if (allBehaviorParameters.get<string>("Name") == "all")
+	{
+		if (allBehaviorParameters.get<string>("DataType") == "enemy")
+		{
+			DBLua::InvokeWithObjectIndex("obj_enemy", allBehaviorParameters["Step"]);
+		}
+	}
+}
+
+//Handles global behaviors 
+void HandleGlobalTypes(sol::table tbl) 
+{
+	if (tbl.get<string>("DataType") == "global")
+	{
+		modState.at(currentState)["all_behaviors"][var]["Step"].call();
+	}
+}
+#pragma endregion AllBehaviors
+
+#pragma endregion ObjectBehaviors
 
 double degreesToRadians(double degrees) {
 	return degrees * 3.14159265358979323846 / 180.0;
