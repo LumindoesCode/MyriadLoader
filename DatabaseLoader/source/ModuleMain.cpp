@@ -725,9 +725,9 @@ void DatabaseLoader::LoadMods()
 		g_YYTKInterface->Print(CM_LIGHTBLUE, "[Myriad Loader] Loaded mod " + mods[i].filename().string());
 	}
 
-	// CAUSES THE CRASH.
+	
 
-	/*for (size_t i = 0; i < roomFiles.size(); i++)
+	for (size_t i = 0; i < roomFiles.size(); i++)
 	{
 		RoomFileReplacement roomFile = roomFiles[i];
 		Files::CopyFileTo(roomFile.destinationName, roomFile.backupName);
@@ -741,12 +741,9 @@ void DatabaseLoader::LoadMods()
 		g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), i, i });
 	}
 
-	GMWrappers::CallGameScript("gml_Script_load_room_files", {});*/
-
-	/*RestoreRoomFiles();*/
-
 	loadingMods = false;
 }
+
 void CreateModdedDirectories() 
 {
 	string dir = Files::GetModsDirectory();
@@ -1053,7 +1050,10 @@ EXPORTED AurieStatus ModuleInitialize(
 	RegisterHooks(Module);
 	g_YYTKInterface->PrintWarning("HOOKS REGISTERED");
 
-	
+	g_YYTKInterface->PrintWarning("REGISTERING ROOMS");
+	//GMWrappers::CallGameScript("gml_Script_load_room_files", {});
+	RestoreRoomFiles();
+	g_YYTKInterface->PrintWarning("ROOMS REGISTERED");
 	
 	//TODO: check that the array functions do not already work
 	//check that the value being overriden is 0
