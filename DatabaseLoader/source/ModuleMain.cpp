@@ -14,6 +14,7 @@
 #include "SaverLoader.h"
 #include <fstream>
 #include <thread>
+#include <stdlib.h>  
 
 #pragma comment(lib, "lua54.lib")
 
@@ -36,6 +37,9 @@ void SortAllBehaviors(sol::table allBehaviors, size_t currentState);
 void HandleAllExistingTypes(sol::table allBehaviorsParameters);
 void HandleAllEnemyTypes(sol::table allBehaviorParameters);
 void HandleGlobalTypes(sol::table tbl, double var, size_t currentState);
+void CreateModdedDirectories();
+sol::state MakeNewModState(filesystem::path modPath);
+bool ModInvalid(filesystem::path modPath, sol::state& currentModState);
 void ClearData();
 
 static sol::table CopyTableFromStateTo(sol::state& source, sol::state& target, sol::table table_to_copy) {
@@ -697,10 +701,54 @@ BOOL WINAPI WriteFileHook(
 	return g_WriteFileTrampoline(File, Buffer, NumberOfBytesToWrite, NumberOfBytesWritten, OverlapInformation);
 }
 
+#pragma region Mod Loading
+
 void DatabaseLoader::LoadMods()
 {
 	loadingMods = true;
 
+	CreateModdedDirectories();
+	string dir = Files::GetModsDirectory();
+	vector<filesystem::path> mods = Files::GetImmediateSubfolders(dir);
+
+	//Add valid mods to modState
+	for (size_t i = 0; i < mods.size(); i++)
+	{
+		sol::state mState = MakeNewModState(mods[i]);
+
+		if (ModInvalid(mods[i], mState)) 
+		{
+			continue;
+		}
+
+		modState.push_back(std::move(mState));
+		g_YYTKInterface->Print(CM_LIGHTBLUE, "[Myriad Loader] Loaded mod " + mods[i].filename().string());
+	}
+
+	// CAUSES THE CRASH.
+
+	/*for (size_t i = 0; i < roomFiles.size(); i++)
+	{
+		RoomFileReplacement roomFile = roomFiles[i];
+		Files::CopyFileTo(roomFile.destinationName, roomFile.backupName);
+		Files::AddRoomsToFile(roomFile.sourceName, roomFile.destinationName);
+	}
+
+	unsigned int size = g_YYTKInterface->CallBuiltin("array_length", { GMWrappers::GetGlobal("gen_list") }).ToInt64();
+
+	for (size_t i = size; i < 15000; i++)
+	{
+		g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), i, i });
+	}
+
+	GMWrappers::CallGameScript("gml_Script_load_room_files", {});*/
+
+	/*RestoreRoomFiles();*/
+
+	loadingMods = false;
+}
+void CreateModdedDirectories() 
+{
 	string dir = Files::GetModsDirectory();
 	string savedir = Files::GetModSavesDirectory();
 	string rooms = Files::GetSteamDirectory() + "rooms/";
@@ -709,63 +757,47 @@ void DatabaseLoader::LoadMods()
 	Files::MakeDirectory(dir);
 	Files::MakeDirectory(savedir);
 	Files::MakeDirectory(roomsBackup);
-
-	vector<filesystem::path> mods = Files::GetImmediateSubfolders(dir);
-
-	for (size_t i = 0; i < mods.size(); i++)
-	{
-		auto state = MakeModState();
-
-		currentState = i;
-
-		state.clear_package_loaders();
-		state.add_package_loader(LoadFileRequire);
-
-		// We should prevent users from overriding these
-		state["all_behaviors"] = state.create_table();
-		state["mod_name"] = mods[i].filename().string();
-
-		if (std::filesystem::exists(mods[i].string() + "/main.lua"))
-		{
-			sol::protected_function_result pfr = state.safe_script_file(mods[i].string() + "/main.lua", [&](lua_State* state, sol::protected_function_result pfr) {
-				sol::error err = pfr;
-				g_YYTKInterface->PrintWarning("Error while loading mod %s : %s", mods[i].filename().string().c_str(), err.what());
-				return pfr;
-			});
-			if (!pfr.valid())
-				continue;
-
-			if (! state["mod_load"].call().valid() )
-				continue;
-		}
-
-		modState.push_back(std::move(state));
-
-		g_YYTKInterface->Print(CM_LIGHTBLUE, "[Myriad Loader] Loaded mod " + mods[i].filename().string());
-	}
-
-	for (size_t i = 0; i < roomFiles.size(); i++)
-	{
-		Files::CopyFileTo(roomFiles.at(i).destinationName, roomFiles.at(i).backupName);
-		Files::AddRoomsToFile(roomFiles.at(i).sourceName, roomFiles.at(i).destinationName);
-	}
-
-	int size = g_YYTKInterface->CallBuiltin("array_length", { GMWrappers::GetGlobal("gen_list") }).ToInt64();
-
-	for (size_t i = size; i <= 15000; i++)
-	{
-		g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), i, i });
-	}
-
-	GMWrappers::CallGameScript("gml_Script_load_room_files", {});
-
-	RestoreRoomFiles();
-
-	loadingMods = false;
 }
+sol::state MakeNewModState(filesystem::path modPath)
+{
+	sol::state mState = MakeModState();
+	mState.clear_package_loaders();
+	mState.add_package_loader(LoadFileRequire);
+
+	// We should prevent users from overriding these
+	mState["all_behaviors"] = mState.create_table();
+	mState["mod_name"] = modPath.filename().string();
+
+	return mState;
+}
+bool ModInvalid(filesystem::path modPath, sol::state& currentModState)
+{
+	if (std::filesystem::exists(modPath.string() + "/main.lua"))
+	{
+		sol::protected_function_result pfr = currentModState.safe_script_file(modPath.string() + "/main.lua", [&](lua_State* state, sol::protected_function_result pfr) {
+			sol::error err = pfr;
+			g_YYTKInterface->PrintWarning("Error while loading mod %s : %s", modPath.filename().string().c_str(), err.what());
+			return pfr;
+			});
+		if (!pfr.valid())
+			return true;
+
+		if (!currentModState["mod_load"].call().valid())
+			return true;
+
+		return false;
+	}
+	return true;
+	
+}
+
+#pragma endregion Mod Loading
 
 //Handle all hooks attached to Star of Providence.
 static void RegisterHooks(AurieModule* Module) {
+
+
+	g_YYTKInterface->PrintWarning("HOOKS ENTERED");
 	yytk_interface->CreateCallback(
 		Module,
 		YYTK::EVENT_OBJECT_CALL,
@@ -787,10 +819,13 @@ static void RegisterHooks(AurieModule* Module) {
 	CScript* script_data = nullptr;
 	PVOID original_function = nullptr;
 
+	g_YYTKInterface->PrintWarning("CALLBACKS CREATED");
 	g_YYTKInterface->GetNamedRoutinePointer(
 		"gml_Script_music_jukebox_get_songs",
 		reinterpret_cast<PVOID*>(&script_data)
 	);
+
+	
 	MmCreateHook(
 		g_ArSelfModule,
 		"Jukebox Injection",
@@ -798,6 +833,7 @@ static void RegisterHooks(AurieModule* Module) {
 		GMHooks::JukeboxInjection,
 		&original_function
 	);
+	g_YYTKInterface->PrintWarning("JUKEBOX HOOKS CREATED");
 
 	g_YYTKInterface->GetNamedRoutinePointer(
 		"gml_Script_music_do",
@@ -846,6 +882,7 @@ static void RegisterHooks(AurieModule* Module) {
 		GMHooks::MusicDoLoopFromStart,
 		&original_function
 	);
+	g_YYTKInterface->PrintWarning("MUSIC HOOKS CREATED");
 
 	g_YYTKInterface->GetNamedRoutinePointer(
 		"gml_Script_enemy_damage",
@@ -859,6 +896,8 @@ static void RegisterHooks(AurieModule* Module) {
 		&original_function
 	);
 
+	g_YYTKInterface->PrintWarning("ENEMY HOOKS CREATED");
+
 	g_YYTKInterface->GetNamedRoutinePointer(
 		"gml_Script_player_takeHit",
 		reinterpret_cast<PVOID*>(&script_data)
@@ -870,7 +909,7 @@ static void RegisterHooks(AurieModule* Module) {
 		GMHooks::PlayerTakeHit,
 		&original_function
 	);
-
+	g_YYTKInterface->PrintWarning("PLAYER INFO HOOK CREATED");
 	g_YYTKInterface->GetNamedRoutinePointer(
 		"gml_Script_button_exit_to_menu",
 		reinterpret_cast<PVOID*>(&script_data)
@@ -882,6 +921,7 @@ static void RegisterHooks(AurieModule* Module) {
 		GMHooks::ReloadAllMods,
 		&original_function
 	);
+	g_YYTKInterface->PrintWarning("RELOAD MODS HOOK CREATED");
 	g_YYTKInterface->GetNamedRoutinePointer(
 		"gml_Script_instance_create",
 		reinterpret_cast<PVOID*>(&script_data)
@@ -893,6 +933,7 @@ static void RegisterHooks(AurieModule* Module) {
 		GMHooks::SpawnRoomObject,
 		&original_function
 	);
+	g_YYTKInterface->PrintWarning("OBJECT SPAWN HOOK CREATED");
 
 	g_YYTKInterface->GetNamedRoutinePointer(
 		"gml_Script_write_savedata",
@@ -917,6 +958,8 @@ static void RegisterHooks(AurieModule* Module) {
 		GMHooks::WriteMidSave,
 		&original_function
 	);
+
+	g_YYTKInterface->PrintWarning("SAVEDATA HOOKS CREATED");
 
 	g_YYTKInterface->GetNamedRoutinePointer(
 		"gml_GlobalScript_button_exit_out",
@@ -961,6 +1004,8 @@ static void RegisterHooks(AurieModule* Module) {
 		WriteFileHook,
 		reinterpret_cast<PVOID*>(&g_WriteFileTrampoline)
 	);
+
+	
 }
 
 EXPORTED AurieStatus ModuleInitialize(
@@ -1001,15 +1046,13 @@ EXPORTED AurieStatus ModuleInitialize(
 
 	g_YYTKInterface->CallBuiltin("instance_deactivate_object", { g_YYTKInterface->CallBuiltin("asset_get_index", {"obj_intro"}) });
 
-
+	g_YYTKInterface->PrintWarning("LOADING MODS");
 	LoadMods();
-
-	do 
-	{
-		//Nothin
-	} while (loadingMods = false);
-
+	g_YYTKInterface->PrintWarning("MODS LOADED");
+	g_YYTKInterface->PrintWarning("REGISTERING HOOKS");
 	RegisterHooks(Module);
+	g_YYTKInterface->PrintWarning("HOOKS REGISTERED");
+
 	
 	
 	//TODO: check that the array functions do not already work
@@ -1021,7 +1064,7 @@ EXPORTED AurieStatus ModuleInitialize(
 	*(int64_t*)((char*)g_YYTKInterface + 0x3C0) = 0x90;
 
 	g_YYTKInterface->CallBuiltin("instance_activate_all", {});
-	g_YYTKInterface->PrintWarning("Mods Loaded");
+	
 	
 
 	return AURIE_SUCCESS;
