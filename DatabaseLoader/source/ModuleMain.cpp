@@ -312,7 +312,7 @@ sol::state DatabaseLoader::MakeModState()
 	inState["projectile_data"] = bind_one(DBLua::ProjectileData, state_ptr);
 	inState["global_data"] = bind_one(DBLua::GlobalData, state_ptr);
 	inState["player_data"] = bind_one(DBLua::PlayerData, state_ptr);
-	//inState["custom_floor"] = bind_one(DBLua::FloorData, state_ptr);
+	inState["custom_floor"] = bind_one(DBLua::FloorData, state_ptr);
 
 	inState["register_data"] = bind_one(RegisterData, state_ptr);
 

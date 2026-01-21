@@ -362,7 +362,6 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 	AllNames.push_back("gml_Object_obj_room_Create_0");
 	AllNames.push_back("gml_Object_obj_room_Step_0");
 	AllNames.push_back("gml_Object_obj_fakefloor_Create_0");
-	AllNames.push_back("gml_Object_obj_savegame_manager_Create_0");
 	AllNames.push_back("gml_Object_obj_floor_Create_0");
 
 	CCode* Code = std::get<2>(FunctionContext.Arguments());
@@ -401,7 +400,7 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 				if (tbl.get<string>("DataType") == "floormap")
 				{
 
-					if ((string)Code->GetName() == (string)"gml_Object_obj_nextlevel_Create_0" || (string)Code->GetName() == (string)"gml_Object_obj_savegame_manager_Create_0")
+					if ((string)Code->GetName() == (string)"gml_Object_obj_nextlevel_Create_0")
 					{
 						RValue floordsmap = g_YYTKInterface->CallBuiltin("ds_map_create", {});
 						g_YYTKInterface->CallBuiltin("ds_map_copy", { floordsmap, GMWrappers::GetGlobal("floormap_1") });
@@ -489,11 +488,6 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 						}
 					}
 
-					if ((string)Code->GetName() == (string)"gml_Object_obj_savegame_manager_Create_0")
-					{
-						g_YYTKInterface->CallGameScript("gml_Script_load_room_files", {});
-					}
-
 					if (g_YYTKInterface->CallBuiltin("ds_map_find_value", { GMWrappers::GetGlobal("current_floormap"), "index" }).ToDouble() == id)
 					{
 
@@ -516,7 +510,7 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 
 								g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "room_theme", floorMusic});
 							}
-							//DBLua::DoMusic(floorMusic);
+							DBLua::DoMusic(floorMusic);
 							
 						}
 						
