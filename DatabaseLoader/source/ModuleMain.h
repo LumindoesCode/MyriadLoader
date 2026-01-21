@@ -15,7 +15,9 @@ namespace DatabaseLoader
 	void UnloadMods();
 	void LoadMods();
 	
+
 	sol::state MakeModState();
+	void RestoreRoomFiles();
 	int LoadFileRequire(lua_State* L);
 	class ModuleMain
 	{

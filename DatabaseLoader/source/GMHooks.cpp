@@ -206,6 +206,7 @@ RValue& GMHooks::ReloadAllMods(IN CInstance* Self, IN CInstance* Other, OUT RVal
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
 
 	UnloadMods();
+	
 	LoadMods();
 
 	return return_value;
@@ -296,7 +297,8 @@ RValue& GMHooks::EnterRun(IN CInstance* Self, IN CInstance* Other, OUT RValue& R
 {
 	auto original_function = reinterpret_cast<decltype(&EnterRun)>(MmGetHookTrampoline(g_ArSelfModule, "EnterRun"));
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
-
+	GMWrappers::CallGameScript("gml_Script_load_room_files", {});
+	RestoreRoomFiles();
 	return Result;
 }
 
@@ -572,7 +574,6 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 		}
 	}
 }
-
 static void SpawnBossLogic(FWCodeEvent& FunctionContext, CCode* Code) {
 	CInstance* Self = std::get<0>(FunctionContext.Arguments());
 	if ((string)Code->GetName() == (string)"gml_Object_obj_beacon_Other_25")
@@ -608,8 +609,6 @@ static void SpawnBossLogic(FWCodeEvent& FunctionContext, CCode* Code) {
 		}
 	}
 }
-
-
 void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 {
 	vector<string> AllNames;
@@ -840,8 +839,6 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 		}
 	}
 }
-
-
 void GMHooks::CartridgeData(FWCodeEvent& FunctionContext) {
 	vector<string> AllNames;
 
