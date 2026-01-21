@@ -19,3 +19,4 @@ CMake
 CMakeLists.txt
 compile_commands.json
 build/
+/DatabaseLoader/DatabaseLoader.vcxproj
