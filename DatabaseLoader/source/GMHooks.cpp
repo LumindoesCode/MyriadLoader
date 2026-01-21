@@ -418,10 +418,6 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 
 						g_YYTKInterface->CallBuiltin("ds_map_set", { floordsmap, "index", id });
 
-						//g_YYTKInterface->CallBuiltin("ds_map_add", { GMWrappers::GetGlobal("layout_map"), (string_view)floorRoomsDestiny, id });
-
-						g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "music", music });
-
 
 						double bossList = tbl.get<double>("BossList");
 						
