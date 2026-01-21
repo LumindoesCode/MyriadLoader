@@ -625,6 +625,9 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 	AllNames.push_back("gml_Object_obj_beacon_Other_25");
 	AllNames.push_back("gml_Object_obj_boss_template_Step_0");
 	AllNames.push_back("gml_Object_obj_boss_template_Draw_0");
+	//Mirror data
+	AllNames.push_back("gml_Object_obj_boss_practice_spawn_Create_0");
+	AllNames.push_back("gml_Object_obj_practice_manager_bosses_Draw_73");
 	//Projectile data
 	//AllNames.push_back("gml_Object_obj_bullet_type_Create_0");
 	//AllNames.push_back("gml_Object_obj_bullet_type_Step_0");
@@ -699,8 +702,14 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 						// Boss scripts 
 						if (modState.at(stateNum)["all_behaviors"][var]["Boss"] == true)
 						{
-
 							sol::table tbl = modState.at(stateNum)["all_behaviors"][var];
+
+							vector<double> bossInstances;
+							if (InstanceName == tbl.get<string>("Name"))
+							{
+								bossInstances.push_back(InstanceID);
+							}
+
 							// (run exclusively from obj_boss_intro_template)
 							if ((string)Code->GetName() == (string)"gml_Object_obj_boss_intro_template_Draw_0")
 							{
@@ -721,6 +730,29 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 									{
 										g_YYTKInterface->CallBuiltin("instance_destroy", {InstanceID});
 									}
+								}
+							}
+
+							if ((string)Code->GetName() == (string)"gml_Object_obj_boss_practice_spawn_Create_0")
+							{
+								//RValue x = g_YYTKInterface->CallBuiltin("variable_instance_get", { GMWrappers::GetGlobal("room_active"), "x" });
+								//RValue y = g_YYTKInterface->CallBuiltin("variable_instance_get", { GMWrappers::GetGlobal("room_active"), "y" });
+
+								//g_YYTKInterface->CallGameScript("instance_create", { x.ToDouble(), y.ToDouble() + 40, tbl.get<double>("BossIntro") });
+							
+							}
+
+							for (int i = 0; i < bossInstances.size(); i++)
+							{
+								if ((string)Code->GetName() == (string)"gml_Object_obj_practice_manager_bosses_Draw_73")
+								{
+									g_YYTKInterface->PrintInfo("ayo");
+									RValue bossListObj = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_practice_manager_bosses" });
+									RValue bossList = g_YYTKInterface->CallBuiltin("variable_instance_get", { bossListObj, "boss_list" });
+									RValue bossArray = g_YYTKInterface->CallBuiltin("array_create", { 2, bossInstances[i]});
+									g_YYTKInterface->CallBuiltin("array_set", { bossArray, 1, g_YYTKInterface->CallBuiltin("ds_list_size", {bossList}).ToDouble() + i});
+
+									g_YYTKInterface->CallBuiltin("ds_list_add", { bossList, bossArray });
 								}
 							}
 
