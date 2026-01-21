@@ -14,6 +14,7 @@
 #include "SaverLoader.h"
 #include <fstream>
 #include <thread>
+#include <stdlib.h>  
 
 #pragma comment(lib, "lua54.lib")
 
@@ -22,6 +23,25 @@ using namespace DatabaseLoader;
 
 static DLInterface* dl_interface = nullptr;
 static YYTK::YYTKInterface* yytk_interface = nullptr;
+void HandleBoss(int id, string bossName, sol::table data);
+void HandleMiniboss(int id, string minibossName);
+void HandleEnemy(int id, string enemyName);
+void HandleEnemyType(string enemyName, sol::table data);
+void HandleFloormap(string floorName, sol::table data);
+void HandleCartridges(string name, sol::table data);
+void GamestateBehaviorRun(size_t currentState);
+void ScreenBehaviorRun(CInstance* currentInstance, size_t currentState);
+void PlayerBehaviorRun(size_t currentState);
+void CheckForAllBehavior(size_t currentState);
+void SortAllBehaviors(sol::table allBehaviors, size_t currentState);
+void HandleAllExistingTypes(sol::table allBehaviorsParameters);
+void HandleAllEnemyTypes(sol::table allBehaviorParameters);
+void HandleGlobalTypes(sol::table tbl, double var, size_t currentState);
+void CreateModdedDirectories();
+sol::state MakeNewModState(filesystem::path modPath);
+bool ModInvalid(filesystem::path modPath, sol::state& currentModState);
+void ClearData();
+void RestoreRoomFiles();
 
 static sol::table CopyTableFromStateTo(sol::state& source, sol::state& target, sol::table table_to_copy) {
 
@@ -49,6 +69,7 @@ string GetUserDirectory() {
 string bossListNum;
 RValue bossListCopy;
 
+#pragma region DataHandling
 static void RegisterData(lua_State* state, sol::table data)
 {
 	sol::state_view sview(state);
@@ -56,125 +77,161 @@ static void RegisterData(lua_State* state, sol::table data)
 
 	tbl[tbl.size() + 1] = data;
 
-	RValue enemytype = g_YYTKInterface->CallBuiltin("asset_get_index", { (string_view)data.get<string>("Name") });
+	RValue objectType = g_YYTKInterface->CallBuiltin("asset_get_index", { (string_view)data.get<string>("Name") });
 
 	string getName = data.get<string>("Name");
 	string getType = data.get<string>("DataType");
 
-	if (getType == "enemy" && getName != "all")
+	if (!g_YYTKInterface->CallBuiltin("object_exists", { objectType }))
 	{
-		if (!g_YYTKInterface->CallBuiltin("object_exists", { enemytype }))
+		if (getType == "enemy" && getName != "all")
 		{
-			int id = Files::HashString(getName);
+			
+			HandleEnemyType(getName, data);
+		}
 
-			if (data.get<bool>("Boss") == true)
-			{
-				if (std::find(customBossNames.begin(), customBossNames.end(), getName) == customBossNames.end())
-				{
-					g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), id, id });
-					customBossNames.push_back(getName);
+		if (getType == "cartridge" && getName != "all")
+		{
+			HandleCartridges(getName, data);
+		}
 
-					string bosslist = "bosslist_" + to_string(data.get<int>("BossFloor"));
+		if (getType == "floormap" && getName != "all")
+		{
+			HandleFloormap(getName, data);
+		}
+    }
 
-					if (g_YYTKInterface->CallBuiltin("variable_global_exists", { (string_view)bosslist }))
-					{
-						g_YYTKInterface->CallBuiltin("ds_list_add", { GMWrappers::GetGlobal(bosslist), id });
-						g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Boss '" + getName + "' (numeric ID " + to_string(id) + ") implemented for floor " + to_string(data.get<int>("BossFloor")));
-					}
-					else
-					{
-						g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created boss '" + getName + "' with numeric ID: " + to_string(id) + " using custom spawning logic");
-					}
-				}
-			}
-			else if (data.get<bool>("Miniboss") == true)
-			{
-				if (std::find(customMinibossNames.begin(), customMinibossNames.end(), getName) == customMinibossNames.end())
-				{
-					g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), id, id });
-					customMinibossNames.push_back(getName);
-					g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created miniboss '" + getName + "' with numeric ID: " + to_string(id));
-				}
-			}
-			else if (std::find(customEnemyNames.begin(), customEnemyNames.end(), getName) == customEnemyNames.end())
-			{
-				g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), id, id });
-				customEnemyNames.push_back(getName);
-				g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created enemy '" + getName + "' with numeric ID: " + to_string(id));
-			}
+}
+
+#pragma region HandleEnemies
+//Processes EnemyData and sorts it to the correct list.
+void HandleEnemyType(string enemyName, sol::table data) 
+{
+	int id = Files::HashString(enemyName);
+		
+	if (data.get<bool>("Boss") == true)
+	{
+		HandleBoss(id, enemyName, data);
+	}
+	else if (data.get<bool>("Miniboss") == true)
+	{
+		HandleMiniboss(id, enemyName);
+	}
+	else if (std::find(customEnemyNames.begin(), customEnemyNames.end(), enemyName) == customEnemyNames.end())
+	{
+		HandleEnemy(id, enemyName);
+	}
+}
+
+//Adds a custom boss data to the game.
+void HandleBoss(int id, string bossName, sol::table data)
+{
+	if (std::find(customBossNames.begin(), customBossNames.end(), bossName) == customBossNames.end())
+	{
+		g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), id, id });
+		customBossNames.push_back(bossName);
+
+		string bosslist = "bosslist_" + to_string(data.get<int>("BossFloor"));
+
+		if (g_YYTKInterface->CallBuiltin("variable_global_exists", { (string_view)bosslist }))
+		{
+			g_YYTKInterface->CallBuiltin("ds_list_add", { GMWrappers::GetGlobal(bosslist), id });
+			g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Boss '" + bossName + "' (numeric ID " + to_string(id) + ") implemented for floor " + to_string(data.get<int>("BossFloor")));
+		}
+		else
+		{
+			g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created boss '" + bossName + "' with numeric ID: " + to_string(id) + " using custom spawning logic");
 		}
 	}
+}
 
-	if (getType == "cartridge" && getName != "all")
+//Adds a custom miniboss data to the game.
+void HandleMiniboss(int id, string minibossName) 
+{
+	if (std::find(customMinibossNames.begin(), customMinibossNames.end(), minibossName) == customMinibossNames.end())
 	{
-		if (!g_YYTKInterface->CallBuiltin("object_exists", { enemytype }))
-		{
-			string getShownName = data.get<string>("ShownName");
-			string getDescription = data.get<string>("Description");
-			int id = Files::HashString(getName);
-
-			if (std::find(customCartridgeNames.begin(), customCartridgeNames.end(), getName) == customCartridgeNames.end())
-			{
-
-				g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), id, id });
-				g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("cart_name"), id, g_YYTKInterface->CallBuiltin("array_create", { 2, (string_view)getShownName })});
-				g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("cart_desc"), id, g_YYTKInterface->CallBuiltin("array_create", { 2, (string_view)getDescription })});
-
-				customCartridgeNames.push_back(getName);
-
-
-				g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created cartridge '" + getName + "' with numeric ID: " + to_string(id));
-			}
-		}
+		g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), id, id });
+		customMinibossNames.push_back(minibossName);
+		g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created miniboss '" + minibossName + "' with numeric ID: " + to_string(id));
 	}
+}
 
-	if (getType == "floormap" && getName != "all")
+//Adds a custom enemy data to the game.
+void HandleEnemy(int id, string enemyName) 
+{
+	g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), id, id });
+	customEnemyNames.push_back(enemyName);
+	g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created enemy '" + enemyName + "' with numeric ID: " + to_string(id));
+}
+#pragma endregion HandleEnemies
+
+//Adds a cartridge data to the game.
+void HandleCartridges(string name, sol::table data)
+{
+	string getShownName = data.get<string>("ShownName");
+	string getDescription = data.get<string>("Description");
+	int id = Files::HashString(name);
+
+	if (std::find(customCartridgeNames.begin(), customCartridgeNames.end(), name) == customCartridgeNames.end())
 	{
-		if (!g_YYTKInterface->CallBuiltin("object_exists", { enemytype }))
-		{
-			string floorRooms = Files::GetModsDirectory() + data.get<string>("Rooms");
-			string floorRoomsDestiny = data.get<string>("RoomsDestination");
-			string roomsDirectory = "rooms/";
 
-			double bossList = data.get<double>("BossList");
+		g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), id, id });
+		g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("cart_name"), id, g_YYTKInterface->CallBuiltin("array_create", { 2, (string_view)getShownName }) });
+		g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("cart_desc"), id, g_YYTKInterface->CallBuiltin("array_create", { 2, (string_view)getDescription }) });
 
-			int id = Files::HashString(getName);
-
-			if (std::find(customFloorNames.begin(), customFloorNames.end(), getName) == customFloorNames.end())
-			{
-				RValue floordsmap = g_YYTKInterface->CallBuiltin("ds_map_create", {});
-				string floormapnum = "floormap_" + to_string(data.get<int>("Floor"));
-
-				g_YYTKInterface->CallBuiltin("ds_map_set", { floordsmap, "index", id });
-
-				/*
-				if (bossList > 0 && g_YYTKInterface->CallBuiltin("ds_map_find_value", { GMWrappers::GetGlobal("current_floormap"), "index" }).ToDouble() == g_YYTKInterface->CallBuiltin("ds_map_find_value", { floordsmap, "index" }).ToDouble())
-				{
-					string bossListNum = "bosslist_" + to_string(data.get<int>("Floor"));
-					RValue bossListCopy = g_YYTKInterface->CallBuiltin("ds_list_copy", { bossListCopy, GMWrappers::GetGlobal(bossListNum) });
-
-					g_YYTKInterface->CallBuiltin("ds_list_clear", { GMWrappers::GetGlobal(bossListNum) });
-					g_YYTKInterface->CallBuiltin("ds_list_add", { GMWrappers::GetGlobal(bossListNum), bossList});
-
-					g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "boss", (string_view)bossListNum});
-				}*/
-
-				if (g_YYTKInterface->CallBuiltin("variable_global_exists", { (string_view)floormapnum }))
-				{
-					g_YYTKInterface->CallBuiltin("ds_map_set", { GMWrappers::GetGlobal(floormapnum), "next", floordsmap});
-					g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Floor '" + getName + "' (numeric ID " + to_string(id) + ") implemented for floor " + to_string(data.get<int>("Floor")));
-				}
-				else
-				{
-					g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created floor '" + getName + "' with numeric ID: " + to_string(id) + " using custom spawning logic");
-				}
+		customCartridgeNames.push_back(name);
 
 
-				customFloorNames.push_back(getName);
-			}
-		}
+		g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created cartridge '" + name + "' with numeric ID: " + to_string(id));
 	}
+}
 
+//Adds a custom floor data to the game.
+void HandleFloormap(string floorName, sol::table data)
+{
+	
+	
+		//string floorRooms = Files::GetModsDirectory() + data.get<string>("Rooms");
+		//string floorRoomsDestiny = data.get<string>("RoomsDestination");
+		//string roomsDirectory = "rooms/";
+
+		double bossList = data.get<double>("BossList");
+
+		int id = Files::HashString(floorName);
+
+		if (std::find(customFloorNames.begin(), customFloorNames.end(), floorName) == customFloorNames.end())
+		{
+			RValue floordsmap = g_YYTKInterface->CallBuiltin("ds_map_create", {});
+			string floormapnum = "floormap_" + to_string(data.get<int>("Floor"));
+
+			g_YYTKInterface->CallBuiltin("ds_map_set", { floordsmap, "index", id });
+
+			/*
+			if (bossList > 0 && g_YYTKInterface->CallBuiltin("ds_map_find_value", { GMWrappers::GetGlobal("current_floormap"), "index" }).ToDouble() == g_YYTKInterface->CallBuiltin("ds_map_find_value", { floordsmap, "index" }).ToDouble())
+			{
+				string bossListNum = "bosslist_" + to_string(data.get<int>("Floor"));
+				RValue bossListCopy = g_YYTKInterface->CallBuiltin("ds_list_copy", { bossListCopy, GMWrappers::GetGlobal(bossListNum) });
+
+				g_YYTKInterface->CallBuiltin("ds_list_clear", { GMWrappers::GetGlobal(bossListNum) });
+				g_YYTKInterface->CallBuiltin("ds_list_add", { GMWrappers::GetGlobal(bossListNum), bossList});
+
+				g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "boss", (string_view)bossListNum});
+			}*/
+
+			if (g_YYTKInterface->CallBuiltin("variable_global_exists", { (string_view)floormapnum }))
+			{
+				g_YYTKInterface->CallBuiltin("ds_map_set", { GMWrappers::GetGlobal(floormapnum), "next", floordsmap });
+				g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Floor '" + floorName + "' (numeric ID " + to_string(id) + ") implemented for floor " + to_string(data.get<int>("Floor")));
+			}
+			else
+			{
+				g_YYTKInterface->Print(CM_LIGHTPURPLE, "[Myriad Loader] Created floor '" + floorName + "' with numeric ID: " + to_string(id) + " using custom spawning logic");
+			}
+
+
+			customFloorNames.push_back(floorName);
+		}
+	
 }
 
 void DatabaseLoader::UnloadMods()
@@ -195,7 +252,11 @@ void DatabaseLoader::UnloadMods()
 		g_YYTKInterface->CallBuiltin("ds_list_copy", { GMWrappers::GetGlobal(bossListNum), bossListCopy });
 	}
 
+	ClearData();
+}
 
+void ClearData() 
+{
 	roomFiles.clear();
 	customEnemyNames.clear();
 	customMinibossNames.clear();
@@ -204,6 +265,7 @@ void DatabaseLoader::UnloadMods()
 	customFloorNames.clear();
 	modState.clear();
 }
+#pragma endregion DataHandling
 
 // Helper to bind the state_ptr and pass functions to lua
 // Sol is unable to properly examine the result std::bind front
@@ -246,11 +308,11 @@ sol::state DatabaseLoader::MakeModState()
 	inState["screen_center_y"] = 0;
 
 	inState["enemy_data"] = bind_one(DBLua::EnemyData, state_ptr);
-	inState["cartridge_data"] = bind_one(DBLua::CartridgeData, state_ptr);
+	//inState["cartridge_data"] = bind_one(DBLua::CartridgeData, state_ptr);
 	inState["projectile_data"] = bind_one(DBLua::ProjectileData, state_ptr);
 	inState["global_data"] = bind_one(DBLua::GlobalData, state_ptr);
 	inState["player_data"] = bind_one(DBLua::PlayerData, state_ptr);
-	inState["custom_floor"] = bind_one(DBLua::FloorData, state_ptr);
+	//inState["custom_floor"] = bind_one(DBLua::FloorData, state_ptr);
 
 	inState["register_data"] = bind_one(RegisterData, state_ptr);
 
@@ -340,7 +402,7 @@ sol::state DatabaseLoader::MakeModState()
 	inState["draw_set_color"] = DBLua::DrawSetColor;
 	inState["draw_set_colour"] = DBLua::DrawSetColor;
 
-	inState["spawn_enemy"] = DBLua::SpawnEnemy;
+	inState["spawn_object"] = DBLua::SpawnObject;
 
 	inState["spawn_boss_intro"] = DBLua::SpawnBossIntro;
 
@@ -392,7 +454,7 @@ sol::state DatabaseLoader::MakeModState()
 	return inState;
 }
 
-static void RestoreRoomFiles()
+void DatabaseLoader::RestoreRoomFiles()
 {
 	for (size_t i = 0; i < roomFiles.size(); i++)
 	{
@@ -400,80 +462,131 @@ static void RestoreRoomFiles()
 	}
 }
 
+#pragma region ObjectBehaviors
+//Handles Code of Injected Objects
 void ObjectBehaviorRun(FWFrame& context)
 {
 	UNREFERENCED_PARAMETER(context);
-
 	CInstance* GlobalInstance;
-
-	RValue view;
 	g_YYTKInterface->GetGlobalInstance(&GlobalInstance);
-
-	g_YYTKInterface->GetBuiltin("view_current", GlobalInstance, 0, view);
-
-	RValue viewCamera = g_YYTKInterface->CallBuiltin("view_get_camera", { view });
 	
 	for (size_t stateNum = 0; stateNum < modState.size(); stateNum++)
 	{
 		g_YYTKInterface->CallBuiltin("audio_sound_gain", { GMWrappers::GetGlobal("current_music"), GMWrappers::GetGlobal("volume_music"), 0 });
-
-		modState.at(stateNum)["hard_mode"] = GMWrappers::GetGlobal("hardmode").ToBoolean();
-		modState.at(stateNum)["paused"] = g_YYTKInterface->CallBuiltin("instance_exists", { g_YYTKInterface->CallBuiltin("asset_get_index", {"obj_pause"})}).ToBoolean();
-		modState.at(stateNum)["loop"] = GMWrappers::GetGlobal("game_loop");
-		modState.at(stateNum)["view_x"] = g_YYTKInterface->CallBuiltin("camera_get_view_x", { viewCamera }).ToDouble();
-		modState.at(stateNum)["screen_center_x"] = modState.at(stateNum).get<double>("view_x") + 120;
-		modState.at(stateNum)["view_y"] = g_YYTKInterface->CallBuiltin("camera_get_view_y", { viewCamera }).ToDouble();
-		modState.at(stateNum)["screen_center_y"] = modState.at(stateNum).get<double>("view_y") + 160;
-
-		RValue playerAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_player" });
-		RValue player = g_YYTKInterface->CallBuiltin("instance_find", { playerAsset, 0 });
-
-		modState.at(stateNum)["player_dead"] = false;
-
-		if (g_YYTKInterface->CallBuiltin("instance_exists", {player.ToDouble()}))
-		{
-			modState.at(stateNum)["player"] = player.ToDouble();
-			modState.at(stateNum)["player_x"] = g_YYTKInterface->CallBuiltin("variable_instance_get", { player, "x" }).ToDouble();
-			modState.at(stateNum)["player_y"] = g_YYTKInterface->CallBuiltin("variable_instance_get", { player, "y" }).ToDouble();
-		}
-		else
-		{
-			modState.at(stateNum)["player_dead"] = true;
-		}
-
-		if (modState.at(stateNum)["all_behaviors"])
-		{
-			sol::table count = modState.at(stateNum)["all_behaviors"];
-			for (double var = 0; var < count.size() + 1; var++)
-			{
-				sol::table tbl = modState.at(stateNum)["all_behaviors"][var];
-				if (modState.at(stateNum)["all_behaviors"][var])
-				{
-					if (g_YYTKInterface->CallBuiltin("object_exists", {g_YYTKInterface->CallBuiltin("asset_get_index", {(string_view)tbl.get<string>("Name")})}))
-					{
-						if (tbl.get<string>("DataType") == "enemy" || tbl.get<string>("DataType") == "projectile")
-						{
-							DBLua::InvokeWithObjectIndex(tbl.get<string>("Name"), tbl["Step"]);
-						}
-					}
-
-					if (tbl.get<string>("Name") == "all")
-					{
-						if (tbl.get<string>("DataType") == "enemy")
-						{
-							DBLua::InvokeWithObjectIndex("obj_enemy", tbl["Step"]);
-						}
-					}
-
-					if (tbl.get<string>("DataType") == "global")
-					{
-						modState.at(stateNum)["all_behaviors"][var]["Step"].call();
-					}
-				}
-			}
-		}
+		GamestateBehaviorRun(stateNum);
+		ScreenBehaviorRun(GlobalInstance, stateNum);
+		PlayerBehaviorRun(stateNum);
+		CheckForAllBehavior(stateNum);
 	}
 };
+
+#pragma region SingleBehaviors
+//Handles the game states (loop, hardmode, pause...)
+void GamestateBehaviorRun(size_t currentState) 
+{
+	modState.at(currentState)["hard_mode"] = GMWrappers::GetGlobal("hardmode").ToBoolean();
+	modState.at(currentState)["paused"] = g_YYTKInterface->CallBuiltin("instance_exists", { g_YYTKInterface->CallBuiltin("asset_get_index", {"obj_pause"}) }).ToBoolean();
+	modState.at(currentState)["loop"] = GMWrappers::GetGlobal("game_loop");
+}
+
+//Handles the current ScreenView
+void ScreenBehaviorRun(CInstance* currentInstance, size_t currentState) 
+{
+	RValue view;
+	g_YYTKInterface->GetBuiltin("view_current", currentInstance, 0, view);
+	RValue viewCamera = g_YYTKInterface->CallBuiltin("view_get_camera", { view });
+
+	modState.at(currentState)["view_x"] = g_YYTKInterface->CallBuiltin("camera_get_view_x", { viewCamera }).ToDouble();
+	modState.at(currentState)["screen_center_x"] = modState.at(currentState).get<double>("view_x") + 120;
+	modState.at(currentState)["view_y"] = g_YYTKInterface->CallBuiltin("camera_get_view_y", { viewCamera }).ToDouble();
+	modState.at(currentState)["screen_center_y"] = modState.at(currentState).get<double>("view_y") + 160;
+}
+
+//Handles the current Player
+void PlayerBehaviorRun(size_t currentState) 
+{
+	RValue playerAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_player" });
+	RValue player = g_YYTKInterface->CallBuiltin("instance_find", { playerAsset, 0 });
+
+	modState.at(currentState)["player_dead"] = false;
+
+	if (g_YYTKInterface->CallBuiltin("instance_exists", { player.ToDouble() }))
+	{
+		modState.at(currentState)["player"] = player.ToDouble();
+		modState.at(currentState)["player_x"] = g_YYTKInterface->CallBuiltin("variable_instance_get", { player, "x" }).ToDouble();
+		modState.at(currentState)["player_y"] = g_YYTKInterface->CallBuiltin("variable_instance_get", { player, "y" }).ToDouble();
+	}
+	else
+	{
+		modState.at(currentState)["player_dead"] = true;
+	}
+}
+
+#pragma endregion SingleBehaviors
+#pragma region AllBehaviors
+//Checks if the received state is an All Behavior.
+void CheckForAllBehavior(size_t currentState)
+{
+	if (modState.at(currentState)["all_behaviors"])
+	{
+		sol::table count = modState.at(currentState)["all_behaviors"];
+		SortAllBehaviors(count, currentState);
+	}
+}
+
+//Sorts the "All Behavior" to the right data type.
+void SortAllBehaviors(sol::table allBehaviors, size_t currentState) 
+{
+	for (double var = 0; var < allBehaviors.size() + 1; var++)
+	{
+		sol::table tbl = modState.at(currentState)["all_behaviors"][var];
+		if (modState.at(currentState)["all_behaviors"][var])
+		{
+			
+			HandleAllExistingTypes(tbl);
+			HandleAllEnemyTypes(tbl);
+			HandleGlobalTypes(tbl, var, currentState);
+			
+		}
+	}
+}
+
+//Handles all the existing types in Star of Providence, enemies and projectiles alike.
+void HandleAllExistingTypes(sol::table allBehaviorsParameters)
+{
+	if (g_YYTKInterface->CallBuiltin("object_exists", { g_YYTKInterface->CallBuiltin("asset_get_index", {(string_view)allBehaviorsParameters.get<string>("Name")}) }))
+	{
+		if (allBehaviorsParameters.get<string>("DataType") == "enemy" || allBehaviorsParameters.get<string>("DataType") == "projectile")
+		{
+			DBLua::InvokeWithObjectIndex(allBehaviorsParameters.get<string>("Name"), allBehaviorsParameters["Step"]);
+		}
+	}
+}
+
+//Handles "All Behaviors" for enemy types
+void HandleAllEnemyTypes(sol::table allBehaviorParameters) 
+{
+	if (allBehaviorParameters.get<string>("Name") == "all")
+	{
+		if (allBehaviorParameters.get<string>("DataType") == "enemy")
+		{
+			DBLua::InvokeWithObjectIndex("obj_enemy", allBehaviorParameters["Step"]);
+			
+		}
+	}
+}
+
+//Handles global behaviors 
+void HandleGlobalTypes(sol::table tbl, double var, size_t currentState) 
+{
+	if (tbl.get<string>("DataType") == "global")
+	{
+		modState.at(currentState)["all_behaviors"][var]["Step"].call();
+	}
+}
+#pragma endregion AllBehaviors
+
+#pragma endregion ObjectBehaviors
 
 double degreesToRadians(double degrees) {
 	return degrees * 3.14159265358979323846 / 180.0;
@@ -589,10 +702,51 @@ BOOL WINAPI WriteFileHook(
 	return g_WriteFileTrampoline(File, Buffer, NumberOfBytesToWrite, NumberOfBytesWritten, OverlapInformation);
 }
 
+#pragma region Mod Loading
+
 void DatabaseLoader::LoadMods()
 {
 	loadingMods = true;
 
+	CreateModdedDirectories();
+	string dir = Files::GetModsDirectory();
+	vector<filesystem::path> mods = Files::GetImmediateSubfolders(dir);
+
+	//Add valid mods to modState
+	for (size_t i = 0; i < mods.size(); i++)
+	{
+		sol::state mState = MakeNewModState(mods[i]);
+
+		if (ModInvalid(mods[i], mState)) 
+		{
+			continue;
+		}
+
+		modState.push_back(std::move(mState));
+		g_YYTKInterface->Print(CM_LIGHTBLUE, "[Myriad Loader] Loaded mod " + mods[i].filename().string());
+	}
+
+	
+
+	for (size_t i = 0; i < roomFiles.size(); i++)
+	{
+		RoomFileReplacement roomFile = roomFiles[i];
+		Files::CopyFileTo(roomFile.destinationName, roomFile.backupName);
+		Files::AddRoomsToFile(roomFile.sourceName, roomFile.destinationName);
+	}
+
+	unsigned int size = g_YYTKInterface->CallBuiltin("array_length", { GMWrappers::GetGlobal("gen_list") }).ToInt64();
+
+	for (size_t i = size; i < 15000; i++)
+	{
+		g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), i, i });
+	}
+
+	loadingMods = false;
+}
+
+void CreateModdedDirectories() 
+{
 	string dir = Files::GetModsDirectory();
 	string savedir = Files::GetModSavesDirectory();
 	string rooms = Files::GetSteamDirectory() + "rooms/";
@@ -601,62 +755,47 @@ void DatabaseLoader::LoadMods()
 	Files::MakeDirectory(dir);
 	Files::MakeDirectory(savedir);
 	Files::MakeDirectory(roomsBackup);
+}
+sol::state MakeNewModState(filesystem::path modPath)
+{
+	sol::state mState = MakeModState();
+	mState.clear_package_loaders();
+	mState.add_package_loader(LoadFileRequire);
 
-	vector<filesystem::path> mods = Files::GetImmediateSubfolders(dir);
+	// We should prevent users from overriding these
+	mState["all_behaviors"] = mState.create_table();
+	mState["mod_name"] = modPath.filename().string();
 
-	for (size_t i = 0; i < mods.size(); i++)
+	return mState;
+}
+bool ModInvalid(filesystem::path modPath, sol::state& currentModState)
+{
+	if (std::filesystem::exists(modPath.string() + "/main.lua"))
 	{
-		auto state = MakeModState();
-
-		currentState = i;
-
-		state.clear_package_loaders();
-		state.add_package_loader(LoadFileRequire);
-
-		// We should prevent users from overriding these
-		state["all_behaviors"] = state.create_table();
-		state["mod_name"] = mods[i].filename().string();
-
-		if (std::filesystem::exists(mods[i].string() + "/main.lua"))
-		{
-			sol::protected_function_result pfr = state.safe_script_file(mods[i].string() + "/main.lua", [&](lua_State* state, sol::protected_function_result pfr) {
-				sol::error err = pfr;
-				g_YYTKInterface->PrintWarning("Error while loading mod %s : %s", mods[i].filename().string().c_str(), err.what());
-				return pfr;
+		sol::protected_function_result pfr = currentModState.safe_script_file(modPath.string() + "/main.lua", [&](lua_State* state, sol::protected_function_result pfr) {
+			sol::error err = pfr;
+			g_YYTKInterface->PrintWarning("Error while loading mod %s : %s", modPath.filename().string().c_str(), err.what());
+			return pfr;
 			});
-			if (!pfr.valid())
-				continue;
+		if (!pfr.valid())
+			return true;
 
-			if (! state["mod_load"].call().valid() )
-				continue;
-		}
+		if (!currentModState["mod_load"].call().valid())
+			return true;
 
-		modState.push_back(std::move(state));
-
-		g_YYTKInterface->Print(CM_LIGHTBLUE, "[Myriad Loader] Loaded mod " + mods[i].filename().string());
+		return false;
 	}
-
-	for (size_t i = 0; i < roomFiles.size(); i++)
-	{
-		Files::CopyFileTo(roomFiles.at(i).destinationName, roomFiles.at(i).backupName);
-		Files::AddRoomsToFile(roomFiles.at(i).sourceName, roomFiles.at(i).destinationName);
-	}
-
-	int size = g_YYTKInterface->CallBuiltin("array_length", { GMWrappers::GetGlobal("gen_list") }).ToInt64();
-
-	for (size_t i = size; i <= 15000; i++)
-	{
-		g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), i, i });
-	}
-
-	GMWrappers::CallGameScript("gml_Script_load_room_files", {});
-
-	RestoreRoomFiles();
-
-	loadingMods = false;
+	return true;
+	
 }
 
+#pragma endregion Mod Loading
+
+//Handle all hooks attached to Star of Providence.
 static void RegisterHooks(AurieModule* Module) {
+
+
+	g_YYTKInterface->PrintWarning("HOOKS ENTERED");
 	yytk_interface->CreateCallback(
 		Module,
 		YYTK::EVENT_OBJECT_CALL,
@@ -678,10 +817,13 @@ static void RegisterHooks(AurieModule* Module) {
 	CScript* script_data = nullptr;
 	PVOID original_function = nullptr;
 
+	g_YYTKInterface->PrintWarning("CALLBACKS CREATED");
 	g_YYTKInterface->GetNamedRoutinePointer(
 		"gml_Script_music_jukebox_get_songs",
 		reinterpret_cast<PVOID*>(&script_data)
 	);
+
+	
 	MmCreateHook(
 		g_ArSelfModule,
 		"Jukebox Injection",
@@ -689,6 +831,7 @@ static void RegisterHooks(AurieModule* Module) {
 		GMHooks::JukeboxInjection,
 		&original_function
 	);
+	g_YYTKInterface->PrintWarning("JUKEBOX HOOKS CREATED");
 
 	g_YYTKInterface->GetNamedRoutinePointer(
 		"gml_Script_music_do",
@@ -737,6 +880,7 @@ static void RegisterHooks(AurieModule* Module) {
 		GMHooks::MusicDoLoopFromStart,
 		&original_function
 	);
+	g_YYTKInterface->PrintWarning("MUSIC HOOKS CREATED");
 
 	g_YYTKInterface->GetNamedRoutinePointer(
 		"gml_Script_enemy_damage",
@@ -750,6 +894,8 @@ static void RegisterHooks(AurieModule* Module) {
 		&original_function
 	);
 
+	g_YYTKInterface->PrintWarning("ENEMY HOOKS CREATED");
+
 	g_YYTKInterface->GetNamedRoutinePointer(
 		"gml_Script_player_takeHit",
 		reinterpret_cast<PVOID*>(&script_data)
@@ -761,7 +907,7 @@ static void RegisterHooks(AurieModule* Module) {
 		GMHooks::PlayerTakeHit,
 		&original_function
 	);
-
+	g_YYTKInterface->PrintWarning("PLAYER INFO HOOK CREATED");
 	g_YYTKInterface->GetNamedRoutinePointer(
 		"gml_Script_button_exit_to_menu",
 		reinterpret_cast<PVOID*>(&script_data)
@@ -773,6 +919,7 @@ static void RegisterHooks(AurieModule* Module) {
 		GMHooks::ReloadAllMods,
 		&original_function
 	);
+	g_YYTKInterface->PrintWarning("RELOAD MODS HOOK CREATED");
 	g_YYTKInterface->GetNamedRoutinePointer(
 		"gml_Script_instance_create",
 		reinterpret_cast<PVOID*>(&script_data)
@@ -784,6 +931,7 @@ static void RegisterHooks(AurieModule* Module) {
 		GMHooks::SpawnRoomObject,
 		&original_function
 	);
+	g_YYTKInterface->PrintWarning("OBJECT SPAWN HOOK CREATED");
 
 	g_YYTKInterface->GetNamedRoutinePointer(
 		"gml_Script_write_savedata",
@@ -808,6 +956,8 @@ static void RegisterHooks(AurieModule* Module) {
 		GMHooks::WriteMidSave,
 		&original_function
 	);
+
+	g_YYTKInterface->PrintWarning("SAVEDATA HOOKS CREATED");
 
 	g_YYTKInterface->GetNamedRoutinePointer(
 		"gml_GlobalScript_button_exit_out",
@@ -852,6 +1002,8 @@ static void RegisterHooks(AurieModule* Module) {
 		WriteFileHook,
 		reinterpret_cast<PVOID*>(&g_WriteFileTrampoline)
 	);
+
+	
 }
 
 EXPORTED AurieStatus ModuleInitialize(
@@ -892,16 +1044,29 @@ EXPORTED AurieStatus ModuleInitialize(
 
 	g_YYTKInterface->CallBuiltin("instance_deactivate_object", { g_YYTKInterface->CallBuiltin("asset_get_index", {"obj_intro"}) });
 
+	g_YYTKInterface->PrintWarning("LOADING MODS");
 	LoadMods();
+	g_YYTKInterface->PrintWarning("MODS LOADED");
+	g_YYTKInterface->PrintWarning("REGISTERING HOOKS");
 	RegisterHooks(Module);
+	g_YYTKInterface->PrintWarning("HOOKS REGISTERED");
 
-	g_YYTKInterface->CallBuiltin("instance_activate_all", {});
-
+	g_YYTKInterface->PrintWarning("REGISTERING ROOMS");
+	/*GMWrappers::CallGameScript("gml_Script_load_room_files", {});
+	RestoreRoomFiles();*/
+	g_YYTKInterface->PrintWarning("ROOMS REGISTERED");
+	
 	//TODO: check that the array functions do not already work
 	//check that the value being overriden is 0
 	//check that array functions work after the override
+
+	//Allows YYTK to correctly read GameMaker tables.
 	g_YYTKInterface->PrintWarning("I'm about to do some sketchy stuff !");
-	*(int64_t*)((char *)g_YYTKInterface + 0x3C0) = 0x90;
+	*(int64_t*)((char*)g_YYTKInterface + 0x3C0) = 0x90;
+
+	g_YYTKInterface->CallBuiltin("instance_activate_all", {});
+	
+	
 
 	return AURIE_SUCCESS;
 }

@@ -37,7 +37,7 @@ sol::lua_value ValueToObjectGMH(RValue obj)
 	}
 }
 
-RValue& DatabaseLoader::GMHooks::JukeboxInjection(
+RValue& GMHooks::JukeboxInjection(
 	IN CInstance* Self,
 	IN CInstance* Other,
 	OUT RValue& Result,
@@ -57,7 +57,7 @@ RValue& DatabaseLoader::GMHooks::JukeboxInjection(
 	return Result;
 }
 
-RValue& DatabaseLoader::GMHooks::MusicDo(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+RValue& GMHooks::MusicDo(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&MusicDo)>(MmGetHookTrampoline(g_ArSelfModule, "MusicDo"));
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
@@ -77,7 +77,7 @@ RValue& DatabaseLoader::GMHooks::MusicDo(IN CInstance* Self, IN CInstance* Other
 	return Result;
 }
 
-RValue& DatabaseLoader::GMHooks::MusicDoLoop(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+RValue& GMHooks::MusicDoLoop(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&MusicDoLoop)>(MmGetHookTrampoline(g_ArSelfModule, "MusicDoLoop"));
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
@@ -88,7 +88,7 @@ RValue& DatabaseLoader::GMHooks::MusicDoLoop(IN CInstance* Self, IN CInstance* O
 	return Result;
 }
 
-RValue& DatabaseLoader::GMHooks::MusicDoLoopFromStart(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+RValue& GMHooks::MusicDoLoopFromStart(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&MusicDoLoopFromStart)>(MmGetHookTrampoline(g_ArSelfModule, "MusicDoLoopFromStart"));
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
@@ -109,8 +109,13 @@ RValue& DatabaseLoader::GMHooks::MusicDoLoopFromStart(IN CInstance* Self, IN CIn
 	return Result;
 }
 
-RValue& DatabaseLoader::GMHooks::EnemyDamage(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+#pragma region EnemyHandling
+
+
+
+RValue& GMHooks::EnemyDamage(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
+	//Gets this function.
 	auto original_function = reinterpret_cast<decltype(&EnemyDamage)>(MmGetHookTrampoline(g_ArSelfModule, "EnemyDamage"));
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
 
@@ -154,6 +159,9 @@ RValue& DatabaseLoader::GMHooks::EnemyDamage(IN CInstance* Self, IN CInstance* O
 	return Result;
 }
 
+
+
+#pragma endregion EnemyHandling
 RValue& DatabaseLoader::GMHooks::PlayerTakeHit(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&PlayerTakeHit)>(MmGetHookTrampoline(g_ArSelfModule, "PlayerTakeHit"));
@@ -192,18 +200,19 @@ RValue& DatabaseLoader::GMHooks::PlayerTakeHit(IN CInstance* Self, IN CInstance*
 }
 
 
-RValue& DatabaseLoader::GMHooks::ReloadAllMods(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+RValue& GMHooks::ReloadAllMods(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&ReloadAllMods)>(MmGetHookTrampoline(g_ArSelfModule, "ReloadAllMods"));
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
 
 	UnloadMods();
+	
 	LoadMods();
 
 	return return_value;
 }
 
-RValue& DatabaseLoader::GMHooks::SpawnRoomObject(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+RValue& GMHooks::SpawnRoomObject(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&SpawnRoomObject)>(MmGetHookTrampoline(g_ArSelfModule, "SpawnRoomObject"));
 	bool enemyFound = false;
@@ -211,7 +220,7 @@ RValue& DatabaseLoader::GMHooks::SpawnRoomObject(IN CInstance* Self, IN CInstanc
 	{
 		if (Arguments[2]->ToDouble() == Files::HashString(customEnemyNames[i]))
 		{
-			Result = DBLua::SpawnEnemy(Arguments[0]->ToDouble(), Arguments[1]->ToDouble(), customEnemyNames[i]);
+			Result = DBLua::SpawnObject(Arguments[0]->ToDouble(), Arguments[1]->ToDouble(), customEnemyNames[i]);
 			enemyFound = true;
 		}
 	}
@@ -219,7 +228,7 @@ RValue& DatabaseLoader::GMHooks::SpawnRoomObject(IN CInstance* Self, IN CInstanc
 	{
 		if (Arguments[2]->ToDouble() == Files::HashString(customMinibossNames[i]))
 		{
-			Result = DBLua::SpawnEnemy(Arguments[0]->ToDouble(), Arguments[1]->ToDouble(), customMinibossNames[i]);
+			Result = DBLua::SpawnObject(Arguments[0]->ToDouble(), Arguments[1]->ToDouble(), customMinibossNames[i]);
 			enemyFound = true;
 		}
 	}
@@ -239,7 +248,7 @@ RValue& DatabaseLoader::GMHooks::SpawnRoomObject(IN CInstance* Self, IN CInstanc
 	return Result;
 }
 
-RValue& DatabaseLoader::GMHooks::WriteSaveData(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+RValue& GMHooks::WriteSaveData(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	g_YYTKInterface->CallBuiltin("array_resize", { GMWrappers::GetGlobal("gen_list"), 289 });
 
@@ -259,7 +268,7 @@ RValue& DatabaseLoader::GMHooks::WriteSaveData(IN CInstance* Self, IN CInstance*
 	return Result;
 }
 
-RValue& DatabaseLoader::GMHooks::WriteMidSave(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+RValue& GMHooks::WriteMidSave(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	g_YYTKInterface->CallBuiltin("array_resize", { GMWrappers::GetGlobal("gen_list"), 289 });
 
@@ -276,7 +285,7 @@ RValue& DatabaseLoader::GMHooks::WriteMidSave(IN CInstance* Self, IN CInstance* 
 	return Result;
 }
 
-RValue& DatabaseLoader::GMHooks::ExitGame(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+RValue& GMHooks::ExitGame(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&ExitGame)>(MmGetHookTrampoline(g_ArSelfModule, "ExitGame"));
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
@@ -284,15 +293,16 @@ RValue& DatabaseLoader::GMHooks::ExitGame(IN CInstance* Self, IN CInstance* Othe
 	return Result;
 }
 
-RValue& DatabaseLoader::GMHooks::EnterRun(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+RValue& GMHooks::EnterRun(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&EnterRun)>(MmGetHookTrampoline(g_ArSelfModule, "EnterRun"));
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
-
+	GMWrappers::CallGameScript("gml_Script_load_room_files", {});
+	RestoreRoomFiles();
 	return Result;
 }
 
-RValue& DatabaseLoader::GMHooks::ChooseBossIntro(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+RValue& GMHooks::ChooseBossIntro(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&ChooseBossIntro)>(MmGetHookTrampoline(g_ArSelfModule, "ChooseBossIntro"));
 	bool shouldSpawnCustom = false;
@@ -402,10 +412,7 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 						static int customFloorNumber = 0;
 						static string customFloorNumberFull = "";
 
-						string roomsDirectory = "rooms/";
-						string floorRoomsDirectoryDestiny = roomsDirectory.append(floorRoomsDestiny);
-
-						RValue roomsDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)floorRoomsDirectoryDestiny });
+						RValue roomsDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)floorRoomsDestiny });
 
 						//thank orio prisco for this
 						//string* stringtogivetostarprov = new string(floorRoomsDestiny);
@@ -415,8 +422,17 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 						dst << src.rdbuf();
 						g_YYTKInterface->PrintInfo((string_view)floorRoomsDestiny);
 
+						double music = tbl.get<double>("Music");
+						int functionID;
 
 						g_YYTKInterface->CallBuiltin("ds_map_set", { floordsmap, "index", id });
+
+						g_YYTKInterface->CallBuiltin("ds_map_add", { GMWrappers::GetGlobal("layout_map"), (string_view)floorRoomsDestiny, id });
+
+						//g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "layout", roomsDestinyString });
+						//g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "music", music });
+
+
 
 
 						double bossList = tbl.get<double>("BossList");
@@ -489,7 +505,7 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 							RValue roomAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_room" });
 							double allRooms = g_YYTKInterface->CallBuiltin("instance_number", { roomAsset }).ToDouble() - 1;
 
-							//GMWrappers::SetGlobal("current_music", floorMusic);
+							GMWrappers::SetGlobal("current_music", floorMusic);
 
 							for (int i = 0; i < allRooms; i++)
 							{
@@ -498,12 +514,9 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 								g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "color2", tbl.get<double>("ColorG") });
 								g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "color3", tbl.get<double>("ColorB") });
 
-								if (g_YYTKInterface->CallBuiltin("variable_instance_get", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "sprite_index" }).ToDouble())
-								{
-								}
 								g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "room_theme", floorMusic});
 							}
-							DBLua::DoMusic(floorMusic);
+							//DBLua::DoMusic(floorMusic);
 							
 						}
 						
@@ -567,7 +580,6 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 		}
 	}
 }
-
 static void SpawnBossLogic(FWCodeEvent& FunctionContext, CCode* Code) {
 	CInstance* Self = std::get<0>(FunctionContext.Arguments());
 	if ((string)Code->GetName() == (string)"gml_Object_obj_beacon_Other_25")
@@ -603,9 +615,7 @@ static void SpawnBossLogic(FWCodeEvent& FunctionContext, CCode* Code) {
 		}
 	}
 }
-
-
-void DatabaseLoader::GMHooks::EnemyData(FWCodeEvent& FunctionContext)
+void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 {
 	vector<string> AllNames;
 	//Enemy data
@@ -621,9 +631,9 @@ void DatabaseLoader::GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 	AllNames.push_back("gml_Object_obj_boss_template_Step_0");
 	AllNames.push_back("gml_Object_obj_boss_template_Draw_0");
 	//Projectile data
-	AllNames.push_back("gml_Object_obj_bullet_type_Create_0");
-	AllNames.push_back("gml_Object_obj_bullet_type_Step_0");
-	AllNames.push_back("gml_Object_obj_bullet_type_Collision_obj_floor"); // CollideTile(proj, tile)
+	//AllNames.push_back("gml_Object_obj_bullet_type_Create_0");
+	//AllNames.push_back("gml_Object_obj_bullet_type_Step_0");
+	//AllNames.push_back("gml_Object_obj_bullet_type_Collision_obj_floor"); // CollideTile(proj, tile)
 	//Global data
 	AllNames.push_back("gml_Object_obj_view_Draw_73");
 	AllNames.push_back("gml_Object_obj_player_Draw_0");
@@ -792,6 +802,8 @@ void DatabaseLoader::GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 								}
 							}
 							// Projectile scripts
+
+							/*
 							if (tbl.get<string>("DataType") == "projectile")
 							{
 								// Create script
@@ -810,6 +822,8 @@ void DatabaseLoader::GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 									modState.at(stateNum)["all_behaviors"][var]["CollideWith"].call(InstanceID, OtherInstanceID);
 								}
 							}
+							*/
+
 							// Global scripts
 							if (tbl.get<string>("DataType") == "global")
 							{
@@ -831,9 +845,7 @@ void DatabaseLoader::GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 		}
 	}
 }
-
-
-void DatabaseLoader::GMHooks::CartridgeData(FWCodeEvent& FunctionContext) {
+void GMHooks::CartridgeData(FWCodeEvent& FunctionContext) {
 	vector<string> AllNames;
 
 	AllNames.push_back("gml_Object_obj_cartridge_Create_0");

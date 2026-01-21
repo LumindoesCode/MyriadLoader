@@ -4,7 +4,6 @@
 *.db-shm
 *.command
 /DatabaseLoader/x64
-*.vcxproj
 *.lastbuildstate
 *.command
 /.vs

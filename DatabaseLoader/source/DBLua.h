@@ -48,7 +48,7 @@ namespace DatabaseLoader
 		static void CallGameFunction(string name, sol::table args);
 
 		static double SpawnParticle(double x, double y, double xvel, double yvel, double sprite);
-		static double SpawnEnemy(double x, double y, string name);
+		static double SpawnObject(double x, double y, string name);
 		static double SpawnBossIntro(double x, double y, string name);
 		static void KillBoss();
 		static void ClearBullets(double x, double y);
