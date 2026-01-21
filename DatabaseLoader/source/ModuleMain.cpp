@@ -41,6 +41,7 @@ void CreateModdedDirectories();
 sol::state MakeNewModState(filesystem::path modPath);
 bool ModInvalid(filesystem::path modPath, sol::state& currentModState);
 void ClearData();
+void RestoreRoomFiles();
 
 static sol::table CopyTableFromStateTo(sol::state& source, sol::state& target, sol::table table_to_copy) {
 
@@ -453,7 +454,7 @@ sol::state DatabaseLoader::MakeModState()
 	return inState;
 }
 
-static void RestoreRoomFiles()
+void DatabaseLoader::RestoreRoomFiles()
 {
 	for (size_t i = 0; i < roomFiles.size(); i++)
 	{
@@ -1051,8 +1052,8 @@ EXPORTED AurieStatus ModuleInitialize(
 	g_YYTKInterface->PrintWarning("HOOKS REGISTERED");
 
 	g_YYTKInterface->PrintWarning("REGISTERING ROOMS");
-	//GMWrappers::CallGameScript("gml_Script_load_room_files", {});
-	RestoreRoomFiles();
+	/*GMWrappers::CallGameScript("gml_Script_load_room_files", {});
+	RestoreRoomFiles();*/
 	g_YYTKInterface->PrintWarning("ROOMS REGISTERED");
 	
 	//TODO: check that the array functions do not already work
