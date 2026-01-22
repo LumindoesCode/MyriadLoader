@@ -400,7 +400,7 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 				if (tbl.get<string>("DataType") == "floormap")
 				{
 
-					if ((string)Code->GetName() == (string)"gml_Object_obj_nextlevel_Create_0")
+					if ((string)Code->GetName() == (string)"gml_Object_obj_nextlevel_Create_0" || (string)Code->GetName() == (string)"gml_Object_obj_savegame_manager_Create_0")
 					{
 						RValue floordsmap = g_YYTKInterface->CallBuiltin("ds_map_create", {});
 						g_YYTKInterface->CallBuiltin("ds_map_copy", { floordsmap, GMWrappers::GetGlobal("floormap_1") });
