@@ -479,7 +479,8 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 
 					for (int i = 0; i < allRooms; i++)
 					{
-						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "sprite_index", tbl.get<double>("Backgrounds") });
+						RValue background = g_YYTKInterface->CallBuiltin("sprite_duplicate", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}) });
+						g_YYTKInterface->CallBuiltin("variable_instance_set", { background, "sprite_index", tbl.get<double>("Backgrounds") });
 						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "color1", tbl.get<double>("ColorR") });
 						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "color2", tbl.get<double>("ColorG") });
 						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "color3", tbl.get<double>("ColorB") });
@@ -583,8 +584,8 @@ void HandleFloor(auto& stateNum, FWCodeEvent& FunctionContext, sol::table tbl, i
 
 		g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "boss", bossListBosses });
 
-		//g_YYTKInterface->Print(CM_BRIGHTWHITE, bossListBosses.ToString());
-		//g_YYTKInterface->Print(CM_BRIGHTWHITE, to_string(bossList));
+		g_YYTKInterface->Print(CM_BRIGHTWHITE, bossListBosses.ToString());
+		g_YYTKInterface->Print(CM_BRIGHTWHITE, to_string(bossList));
 	}
 
 	if (!FunctionContext.CalledOriginal())
