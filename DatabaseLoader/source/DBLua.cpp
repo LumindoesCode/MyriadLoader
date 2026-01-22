@@ -1076,7 +1076,7 @@ sol::table DatabaseLoader::DBLua::FloorData(lua_State* state, string name)
 		"ColorB", [](double) { return 0; },
 		"Rooms", [](string) {},
 		"MinibossRooms", [](string) {},
-		"MinibossAmount", [](int) {},
+		"MinibossAmount", [](int) { return 1; },
 		"RoomsID", [](string) {},
 		"Create", [](double) {},
 		"Music", [](double) {return GetAsset("mus_floor6");},

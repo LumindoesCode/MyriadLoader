@@ -418,6 +418,7 @@ vector<string> RegisterGMFloorFunctions()
 	GMfunctions.push_back("gml_Object_obj_room_Step_0");
 	GMfunctions.push_back("gml_Object_obj_fakefloor_Create_0");
 	GMfunctions.push_back("gml_Object_obj_floor_Create_0");
+	GMfunctions.push_back("gml_Object_obj_beacon_Other_25");
 
 	return GMfunctions;
 }
@@ -461,8 +462,6 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 				string floorRoomsDestiny = "rooms/" + tbl.get<string>("RoomsID");
 				RValue roomsDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)floorRoomsDestiny });
 
-				//Creates Floor Files
-				CreateFloorFile(floorRooms, roomsDestinyString, floorRoomsDestiny);
 				if (!tbl.get<string>("MinibossRooms").empty())
 				{
 					string minibossRooms = Files::GetModsDirectory() + tbl.get<string>("MinibossRooms");
@@ -470,6 +469,10 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 					RValue minibossDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)minibossRoomsDestiny });
 					CreateMiniBossFile(minibossRooms, minibossDestinyString, minibossRoomsDestiny);
 				}
+
+				//Creates Floor Files
+				CreateFloorFile(floorRooms, roomsDestinyString, floorRoomsDestiny);
+				
 			}
 		
 			if (CheckFloorID(id))
@@ -528,6 +531,12 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 							g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "sprite_index", tbl.get<double>("Tileset") });
 						}
 					}
+				}
+				if ((string)Code->GetName() == (string)"gml_Object_obj_beacon_Other_25")
+				{
+					RValue beaconAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_beacon" });
+					RValue beaconInstance = g_YYTKInterface->CallBuiltin("instance_find", { beaconAsset, 0 });
+					g_YYTKInterface->CallBuiltin("variable_instance_set", { beaconInstance, "getboss", tbl.get<double>("BossList") });
 				}
 			}
 
@@ -590,19 +599,11 @@ void HandleFloor(auto& stateNum, FWCodeEvent& FunctionContext, sol::table tbl, i
 	//g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "music", music });
 
 	//TODO: Implement custom bossLists.
-	double bossList = tbl.get<double>("BossList");
+	//double bossList = tbl.get<double>("BossList");
 
 
 	if (g_YYTKInterface->CallBuiltin("ds_map_find_value", { GMWrappers::GetGlobal("current_floormap"), "index" }).ToDouble() == g_YYTKInterface->CallBuiltin("ds_map_find_value", { floordsmap, "index" }).ToDouble())
 	{
-		RValue bossListBosses = g_YYTKInterface->CallBuiltin("ds_list_create", {});
-
-		g_YYTKInterface->CallBuiltin("ds_list_add", { bossListBosses, bossList });
-
-		g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "boss", bossListBosses });
-
-		g_YYTKInterface->Print(CM_BRIGHTWHITE, bossListBosses.ToString());
-		g_YYTKInterface->Print(CM_BRIGHTWHITE, to_string(bossList));
 	}
 
 	if (!FunctionContext.CalledOriginal())
@@ -635,7 +636,6 @@ void CreateMiniBossFile(string floorRooms, RValue roomsDestinyString, string flo
 	ofstream dst(roomsDestinyString.ToString());
 	dst << src.rdbuf();
 	g_YYTKInterface->PrintInfo((string_view)floorRoomsDestiny);
-	LoadRooms();
 }
 void ForceFloor(int id, auto& stateNum, RValue floordsmap, FWCodeEvent& FunctionContext, int var) 
 {
