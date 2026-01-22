@@ -21,6 +21,7 @@ bool FloorCreated(CCode* Code);
 bool CheckFloorID(int id);
 void HandleFloor(auto& stateNum, FWCodeEvent& FunctionContext, sol::table tbl, int id, int var);
 void CreateFloorFile(string floorRooms, RValue roomsDestinyString, string floorRoomsDestiny);
+void CreateMiniBossFile(string floorRooms, RValue roomsDestinyString, string floorRoomsDestiny);
 void ForceFloor(int id, auto& stateNum, RValue floordsmap, FWCodeEvent& FunctionContext, int var);
 
 
@@ -462,6 +463,13 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 
 				//Creates Floor Files
 				CreateFloorFile(floorRooms, roomsDestinyString, floorRoomsDestiny);
+				if (!tbl.get<string>("MinibossRooms").empty())
+				{
+					string minibossRooms = Files::GetModsDirectory() + tbl.get<string>("MinibossRooms");
+					string minibossRoomsDestiny = "rooms/miniboss_" + tbl.get<string>("RoomsID");
+					RValue minibossDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)minibossRoomsDestiny });
+					CreateMiniBossFile(minibossRooms, minibossDestinyString, minibossRoomsDestiny);
+				}
 			}
 		
 			if (CheckFloorID(id))
@@ -562,6 +570,15 @@ void HandleFloor(auto& stateNum, FWCodeEvent& FunctionContext, sol::table tbl, i
 	string floorRoomsDestiny = "rooms/" + tbl.get<string>("RoomsID");
 	RValue roomsDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)floorRoomsDestiny });
 
+	if (!tbl.get<string>("MinibossRooms").empty())
+	{
+		string minibossRooms = Files::GetModsDirectory() + tbl.get<string>("MinibossRooms");
+		string minibossRoomsDestiny = "rooms/miniboss_" + tbl.get<string>("RoomsID");
+		RValue minibossDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)minibossRoomsDestiny });
+		g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "miniboss", minibossDestinyString});
+		g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "miniboss amount", tbl.get<int>("MinibossAmount") });
+	}
+
 	
 	int functionID;
 	g_YYTKInterface->CallBuiltin("ds_map_set", { floordsmap, "index", id });
@@ -607,6 +624,13 @@ void CreateFloorFile(string floorRooms, RValue roomsDestinyString, string floorR
 {
 	//thank orio prisco for this
 	//string* stringtogivetostarprov = new string(floorRoomsDestiny);
+	ifstream src(floorRooms);
+	ofstream dst(roomsDestinyString.ToString());
+	dst << src.rdbuf();
+	LoadRooms();
+}
+void CreateMiniBossFile(string floorRooms, RValue roomsDestinyString, string floorRoomsDestiny)
+{
 	ifstream src(floorRooms);
 	ofstream dst(roomsDestinyString.ToString());
 	dst << src.rdbuf();
