@@ -445,8 +445,8 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 		int id = Files::HashString(tbl.get<string>("Name"));
 		if (tbl.get<string>("DataType") == "floormap")
 		{
-			//FIRST CHECK
-			if(FloorCreated(Code))
+			
+			if(FloorCreated(Code) || SaveCreated(Code))
 			{
 				HandleFloor(stateNum, FunctionContext, tbl, id, var);
 			}
@@ -463,7 +463,7 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 				//Creates Floor Files
 				CreateFloorFile(floorRooms, roomsDestinyString, floorRoomsDestiny);
 			}
-			//SECOND CHECK
+		
 			if (CheckFloorID(id))
 			{
 
