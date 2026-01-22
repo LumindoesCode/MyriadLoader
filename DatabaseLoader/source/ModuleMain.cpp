@@ -1051,10 +1051,9 @@ EXPORTED AurieStatus ModuleInitialize(
 	RegisterHooks(Module);
 	g_YYTKInterface->PrintWarning("HOOKS REGISTERED");
 
-	g_YYTKInterface->PrintWarning("REGISTERING ROOMS");
-	/*GMWrappers::CallGameScript("gml_Script_load_room_files", {});
-	RestoreRoomFiles();*/
-	g_YYTKInterface->PrintWarning("ROOMS REGISTERED");
+
+	
+
 	
 	//TODO: check that the array functions do not already work
 	//check that the value being overriden is 0
