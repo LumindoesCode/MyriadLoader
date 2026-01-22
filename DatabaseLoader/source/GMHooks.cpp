@@ -16,11 +16,13 @@ void LoadRooms();
 vector<string> RegisterGMFloorFunctions();
 void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FWCodeEvent& FunctionContext);
 string GetFloorDataVariableName(RValue Instance);
-bool AtBeginState(CCode* Code);
+bool SaveCreated(CCode* Code);
+bool FloorCreated(CCode* Code);
 bool CheckFloorID(int id);
-void CreateFloor(auto& stateNum, FWCodeEvent& FunctionContext, sol::table tbl, int id, int var);
+void HandleFloor(auto& stateNum, FWCodeEvent& FunctionContext, sol::table tbl, int id, int var);
 void CreateFloorFile(string floorRooms, RValue roomsDestinyString, string floorRoomsDestiny);
-void ForceFloor(int id, auto& stateNum, RValue floordsmap, FWCodeEvent& FunctionContext);
+void ForceFloor(int id, auto& stateNum, RValue floordsmap, FWCodeEvent& FunctionContext, int var);
+
 
 RValue ObjectToValueGMH(sol::object obj)
 {
@@ -119,10 +121,6 @@ RValue& GMHooks::MusicDoLoopFromStart(IN CInstance* Self, IN CInstance* Other, O
 	return Result;
 }
 
-#pragma region EnemyHandling
-
-
-
 RValue& GMHooks::EnemyDamage(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	//Gets this function.
@@ -169,9 +167,6 @@ RValue& GMHooks::EnemyDamage(IN CInstance* Self, IN CInstance* Other, OUT RValue
 	return Result;
 }
 
-
-
-#pragma endregion EnemyHandling
 RValue& DatabaseLoader::GMHooks::PlayerTakeHit(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&PlayerTakeHit)>(MmGetHookTrampoline(g_ArSelfModule, "PlayerTakeHit"));
@@ -208,7 +203,6 @@ RValue& DatabaseLoader::GMHooks::PlayerTakeHit(IN CInstance* Self, IN CInstance*
 
 	return Result;
 }
-
 
 RValue& GMHooks::ReloadAllMods(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
@@ -307,6 +301,7 @@ RValue& GMHooks::EnterRun(IN CInstance* Self, IN CInstance* Other, OUT RValue& R
 {
 	auto original_function = reinterpret_cast<decltype(&EnterRun)>(MmGetHookTrampoline(g_ArSelfModule, "EnterRun"));
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
+	
 	LoadRooms();
 	return Result;
 }
@@ -373,7 +368,7 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 
 	vector<string> AllNames = RegisterGMFloorFunctions();
 	CCode* Code = std::get<2>(FunctionContext.Arguments());
-
+	
 	if (std::find(AllNames.begin(), AllNames.end(), Code->GetName()) != AllNames.end())
 	{
 		CInstance* Self = std::get<0>(FunctionContext.Arguments());
@@ -410,6 +405,8 @@ void DatabaseLoader::GMHooks::FloorData(FWCodeEvent& FunctionContext)
 			}
 		}
 	}
+
+	
 }
 vector<string> RegisterGMFloorFunctions() 
 {
@@ -449,11 +446,23 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 		if (tbl.get<string>("DataType") == "floormap")
 		{
 			//FIRST CHECK
-			if(AtBeginState(Code))
+			if(FloorCreated(Code))
 			{
-				CreateFloor(stateNum, FunctionContext, tbl, id, var);
+				HandleFloor(stateNum, FunctionContext, tbl, id, var);
 			}
 
+			if (SaveCreated(Code)) 
+			{
+					
+				RValue floordsmap = g_YYTKInterface->CallBuiltin("ds_map_create", {});
+				g_YYTKInterface->CallBuiltin("ds_map_copy", { floordsmap, GMWrappers::GetGlobal("floormap_1") });
+				string floorRooms = Files::GetModsDirectory() + tbl.get<string>("Rooms");
+				string floorRoomsDestiny = "rooms/" + tbl.get<string>("RoomsID");
+				RValue roomsDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)floorRoomsDestiny });
+
+				//Creates Floor Files
+				CreateFloorFile(floorRooms, roomsDestinyString, floorRoomsDestiny);
+			}
 			//SECOND CHECK
 			if (CheckFloorID(id))
 			{
@@ -517,17 +526,22 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 
 	}
 }
-bool AtBeginState(CCode* Code) 
+bool FloorCreated(CCode* Code) 
 {
-	if ((string)Code->GetName() == (string)"gml_Object_obj_nextlevel_Create_0") 
+	//Calls Create Floor every time the player enters a floor.
+	if ((string)Code->GetName() == (string)"gml_Object_obj_nextlevel_Create_0")
 	{
 		return true;
 	}
-	else if ((string)Code->GetName() == (string)"gml_Object_obj_savegame_manager_Create_0") 
+	return false;
+}
+bool SaveCreated(CCode* Code) 
+{
+	//Calls Create Floor at start of the game.
+	if ((string)Code->GetName() == (string)"gml_Object_obj_savegame_manager_Create_0") 
 	{
 		return true;
-	}
-	
+	}	
 	return false;
 }
 bool CheckFloorID(int id)
@@ -538,7 +552,7 @@ bool CheckFloorID(int id)
 	}
 	return false;
 }
-void CreateFloor(auto& stateNum, FWCodeEvent& FunctionContext, sol::table tbl, int id, int var)
+void HandleFloor(auto& stateNum, FWCodeEvent& FunctionContext, sol::table tbl, int id, int var)
 {
 	//Initialize Floor variables 
 	RValue floordsmap = g_YYTKInterface->CallBuiltin("ds_map_create", {});
@@ -546,9 +560,6 @@ void CreateFloor(auto& stateNum, FWCodeEvent& FunctionContext, sol::table tbl, i
 	string floorRooms = Files::GetModsDirectory() + tbl.get<string>("Rooms");
 	string floorRoomsDestiny = "rooms/" + tbl.get<string>("RoomsID");
 	RValue roomsDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)floorRoomsDestiny });
-
-	//Creates Floor Files
-	CreateFloorFile(floorRooms, roomsDestinyString, floorRoomsDestiny);
 
 	
 	int functionID;
@@ -599,6 +610,7 @@ void CreateFloorFile(string floorRooms, RValue roomsDestinyString, string floorR
 	ofstream dst(roomsDestinyString.ToString());
 	dst << src.rdbuf();
 	g_YYTKInterface->PrintInfo((string_view)floorRoomsDestiny);
+	LoadRooms();
 }
 void ForceFloor(int id, auto& stateNum, RValue floordsmap, FWCodeEvent& FunctionContext, int var) 
 {
