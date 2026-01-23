@@ -460,9 +460,6 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 					
 				RValue floordsmap = g_YYTKInterface->CallBuiltin("ds_map_create", {});
 				g_YYTKInterface->CallBuiltin("ds_map_copy", { floordsmap, GMWrappers::GetGlobal("floormap_1") });
-				g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "shop", true });
-				g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "upgrade", true });
-
 
 				string floorRooms = Files::GetModsDirectory() + tbl.get<string>("Rooms");
 				string floorRoomsDestiny = "rooms/" + tbl.get<string>("RoomsID");
@@ -640,8 +637,6 @@ void HandleFloor(auto& stateNum, FWCodeEvent& FunctionContext, sol::table tbl, i
 	string floorRoomsDestiny = "rooms/" + tbl.get<string>("RoomsID");
 	RValue roomsDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)floorRoomsDestiny });
 
-	g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "shop", true });
-	g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "upgrade", true });
 	if (!tbl.get<string>("MinibossRooms").empty())
 	{
 		string minibossRooms = Files::GetModsDirectory() + tbl.get<string>("MinibossRooms");
