@@ -416,8 +416,7 @@ vector<string> RegisterGMFloorFunctions()
 	GMfunctions.push_back("gml_Object_obj_savegame_manager_Create_0");
 	GMfunctions.push_back("gml_Object_obj_room_Create_0");
 	GMfunctions.push_back("gml_Object_obj_room_Step_0");
-	GMfunctions.push_back("gml_Object_obj_fakefloor_Create_0");
-	GMfunctions.push_back("gml_Object_obj_floor_Create_0");
+	GMfunctions.push_back("gml_Object_obj_room_Other_10");
 	GMfunctions.push_back("gml_Object_obj_lock_Create_0");
 	GMfunctions.push_back("gml_Object_obj_beacon_Other_25");
 	GMfunctions.push_back("gml_Object_obj_nextlevel_Draw_0");
@@ -548,27 +547,14 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 					g_YYTKInterface->CallBuiltin("variable_instance_set", { GMWrappers::GetGlobal("room_active"), "room_door", tbl.get<double>("Door") });
 				}
 
-				if ((string)Code->GetName() == (string)"gml_Object_obj_fakefloor_Create_0")
-				{
-					RValue roomAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_fakefloor" });
-					double allRooms = g_YYTKInterface->CallBuiltin("instance_number", { roomAsset }).ToDouble() - 1;
-					double spriteID = 266;
-
-
-					for (int i = 0; i <= allRooms; i++)
-					{
-						if (g_YYTKInterface->CallBuiltin("variable_instance_get", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "sprite_index" }).ToDouble() == spriteID)
-						{
-							g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "sprite_index", tbl.get<double>("Tileset") });
-						}
-					}
-
-				}
-				if ((string)Code->GetName() == (string)"gml_Object_obj_floor_Create_0")
+				if ((string)Code->GetName() == (string)"gml_Object_obj_room_Other_10")
 				{
 					RValue roomAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_floor" });
 					double allRooms = g_YYTKInterface->CallBuiltin("instance_number", { roomAsset }).ToDouble() - 1;
+					RValue fakeAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_fakefloor" });
+					double allFakes = g_YYTKInterface->CallBuiltin("instance_number", { fakeAsset }).ToDouble() - 1;
 					double spriteID = 266;
+
 
 					for (int i = 0; i <= allRooms; i++)
 					{
@@ -577,6 +563,15 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 							g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "sprite_index", tbl.get<double>("Tileset") });
 						}
 					}
+
+					for (int i = 0; i <= allFakes; i++)
+					{
+						if (g_YYTKInterface->CallBuiltin("variable_instance_get", { g_YYTKInterface->CallBuiltin("instance_find", {fakeAsset, i}), "sprite_index" }).ToDouble() == spriteID)
+						{
+							g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {fakeAsset, i}), "sprite_index", tbl.get<double>("Tileset") });
+						}
+					}
+
 				}
 				if ((string)Code->GetName() == (string)"gml_Object_obj_beacon_Other_25")
 				{
