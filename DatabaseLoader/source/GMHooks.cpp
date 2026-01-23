@@ -567,11 +567,6 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 					g_YYTKInterface->CallBuiltin("variable_instance_set", { beaconInstance, "getboss", g_YYTKInterface->CallBuiltin("ds_list_find_value", {bossList, 0}) });
 				}
 
-				if ((string)Code->GetName() == (string)"gml_Object_obj_nextlevel_Draw_0")
-				{
-					RValue nameArray = g_YYTKInterface->CallBuiltin("array_get_index", { GMWrappers::GetGlobal("greeting_strings"), 22 });
-					g_YYTKInterface->CallBuiltin("variable_instance_set", { nameArray, 0, (string_view)tbl.get<string>("Name") });
-				}
 			}
 
 		}
