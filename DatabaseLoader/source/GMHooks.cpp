@@ -460,7 +460,7 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 			{
 					
 				RValue floordsmap = g_YYTKInterface->CallBuiltin("ds_map_create", {});
-				g_YYTKInterface->CallBuiltin("ds_map_copy", { floordsmap, GMWrappers::GetGlobal("floormap_1") });
+				g_YYTKInterface->CallBuiltin("ds_map_copy", { floordsmap, GMWrappers::GetGlobal("floormap_6") });
 				string floorRooms = Files::GetModsDirectory() + tbl.get<string>("Rooms");
 				string floorRoomsDestiny = "rooms/" + tbl.get<string>("RoomsID");
 				RValue roomsDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)floorRoomsDestiny });
@@ -527,7 +527,7 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 				{
 					RValue roomAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_fakefloor" });
 					double allRooms = g_YYTKInterface->CallBuiltin("instance_number", { roomAsset }).ToDouble() - 1;
-					double spriteID = 266;
+					double spriteID = 346;
 
 
 					for (int i = 0; i <= allRooms; i++)
@@ -543,7 +543,7 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 				{
 					RValue roomAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_floor" });
 					double allRooms = g_YYTKInterface->CallBuiltin("instance_number", { roomAsset }).ToDouble() - 1;
-					double spriteID = 266;
+					double spriteID = 346;
 
 					for (int i = 0; i <= allRooms; i++)
 					{
@@ -565,6 +565,10 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 					}
 					g_YYTKInterface->CallBuiltin("ds_list_shuffle", { bossList });
 					g_YYTKInterface->CallBuiltin("variable_instance_set", { beaconInstance, "getboss", g_YYTKInterface->CallBuiltin("ds_list_find_value", {bossList, 0}) });
+				}
+				if ((string)Code->GetName() == (string)"gml_Object_obj_nextlevel_Draw_0")
+				{
+
 				}
 
 			}
@@ -603,7 +607,7 @@ void HandleFloor(auto& stateNum, FWCodeEvent& FunctionContext, sol::table tbl, i
 {
 	//Initialize Floor variables 
 	RValue floordsmap = g_YYTKInterface->CallBuiltin("ds_map_create", {});
-	g_YYTKInterface->CallBuiltin("ds_map_copy", { floordsmap, GMWrappers::GetGlobal("floormap_1") });
+	g_YYTKInterface->CallBuiltin("ds_map_copy", { floordsmap, GMWrappers::GetGlobal("floormap_6") });
 	string floorRooms = Files::GetModsDirectory() + tbl.get<string>("Rooms");
 	string floorRoomsDestiny = "rooms/" + tbl.get<string>("RoomsID");
 	RValue roomsDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)floorRoomsDestiny });
@@ -690,6 +694,7 @@ void ForceFloor(int id, auto& stateNum, RValue floordsmap, FWCodeEvent& Function
 
 		g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("floormap_array"), id, floordsmap });
 		g_YYTKInterface->CallBuiltin("ds_map_set", { floordsmap, "next", customFloorNumber + 4 });
+		g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "difficult", customFloorNumber });
 
 		if (tbl.get<double>("Floor") == 1)
 		{
