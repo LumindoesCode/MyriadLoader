@@ -420,6 +420,7 @@ vector<string> RegisterGMFloorFunctions()
 	GMfunctions.push_back("gml_Object_obj_floor_Create_0");
 	GMfunctions.push_back("gml_Object_obj_lock_Create_0");
 	GMfunctions.push_back("gml_Object_obj_beacon_Other_25");
+	GMfunctions.push_back("gml_Object_obj_nextlevel_Draw_0");
 
 	return GMfunctions;
 }
@@ -564,6 +565,12 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 					g_YYTKInterface->CallBuiltin("ds_list_shuffle", { bossList });
 					g_YYTKInterface->CallBuiltin("variable_instance_set", { beaconInstance, "getboss", g_YYTKInterface->CallBuiltin("ds_list_find_value", {bossList, 0}) });
 				}
+
+				if ((string)Code->GetName() == (string)"gml_Object_obj_nextlevel_Draw_0")
+				{
+					RValue nameArray = g_YYTKInterface->CallBuiltin("array_get_index", { GMWrappers::GetGlobal("greeting_strings"), 22 });
+					g_YYTKInterface->CallBuiltin("variable_instance_set", { nameArray, 0, (string_view)tbl.get<string>("Name") });
+				}
 			}
 
 		}
@@ -678,15 +685,22 @@ void ForceFloor(int id, auto& stateNum, RValue floordsmap, FWCodeEvent& Function
 	sol::protected_function_result result = stateNum["all_behaviors"][var]["ShouldForceFloor"].call();
 	if (result.valid() && result.get<bool>())
 	{
-
 		sol::table tbl = stateNum["all_behaviors"][var];
 		customFloorName = tbl.get<string>("Name");
 		customFloorNumber = tbl.get<int>("Floor");
 		customFloorNumberFull = "floormap_" + to_string(customFloorNumber - 1);
 
 		g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("floormap_array"), id, floordsmap });
-		g_YYTKInterface->CallBuiltin("ds_map_set", { GMWrappers::GetGlobal(customFloorNumberFull), "next", id });
 		g_YYTKInterface->CallBuiltin("ds_map_set", { floordsmap, "next", customFloorNumber + 4 });
+
+		if (tbl.get<double>("Floor") == 1)
+		{
+			g_YYTKInterface->CallBuiltin("ds_map_set", { GMWrappers::GetGlobal("floormap_hub"), "next", id });
+		}
+		else {
+			g_YYTKInterface->CallBuiltin("ds_map_set", { GMWrappers::GetGlobal(customFloorNumberFull), "next", id });
+		}
+
 		FunctionContext.Call();
 	}
 }
