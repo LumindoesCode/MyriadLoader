@@ -211,9 +211,7 @@ RValue& GMHooks::ReloadAllMods(IN CInstance* Self, IN CInstance* Other, OUT RVal
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
 
 	UnloadMods();
-	
-	LoadMods();
-
+	//LoadMods();
 	return return_value;
 }
 
@@ -264,7 +262,7 @@ RValue& GMHooks::WriteSaveData(IN CInstance* Self, IN CInstance* Other, OUT RVal
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
 
 	int size = g_YYTKInterface->CallBuiltin("array_length", { GMWrappers::GetGlobal("gen_list") }).ToInt64();
-
+	
 	for (size_t i = size; i <= 15000; i++)
 	{
 		g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("gen_list"), i, i });
@@ -279,7 +277,6 @@ RValue& GMHooks::WriteMidSave(IN CInstance* Self, IN CInstance* Other, OUT RValu
 
 	auto original_function = reinterpret_cast<decltype(&WriteMidSave)>(MmGetHookTrampoline(g_ArSelfModule, "WriteMidSave"));
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
-
 	int size = g_YYTKInterface->CallBuiltin("array_length", { GMWrappers::GetGlobal("gen_list") }).ToInt64();
 
 	for (size_t i = size; i <= 15000; i++)
@@ -302,7 +299,11 @@ RValue& GMHooks::EnterRun(IN CInstance* Self, IN CInstance* Other, OUT RValue& R
 {
 	auto original_function = reinterpret_cast<decltype(&EnterRun)>(MmGetHookTrampoline(g_ArSelfModule, "EnterRun"));
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
-	
+
+	g_YYTKInterface->PrintWarning("LOADING MODS");
+	//DrawLoadingScreen();
+	LoadMods();
+	g_YYTKInterface->PrintWarning("MODS LOADED");
 	LoadRooms();
 	return Result;
 }
@@ -667,7 +668,9 @@ void CreateFloorFile(string floorRooms, RValue roomsDestinyString, string floorR
 	ifstream src(floorRooms);
 	ofstream dst(roomsDestinyString.ToString());
 	dst << src.rdbuf();
+	
 	LoadRooms();
+	
 }
 void CreateMiniBossFile(string floorRooms, RValue roomsDestinyString, string floorRoomsDestiny)
 {

@@ -1129,11 +1129,17 @@ void DatabaseLoader::DBLua::AddBestiaryEntry(string name, double race, double mu
 
 void DatabaseLoader::DBLua::AddRoomsTo(string sourceName, string destinationName)
 {
-	roomFiles.push_back(RoomFileReplacement(
-		Files::GetModsDirectory() + sourceName,
-		Files::GetSteamDirectory() + "rooms/" + destinationName,
-		Files::GetSteamDirectory() + "rooms/backup/" + destinationName
+	
+	
+		roomFiles.push_back(RoomFileReplacement(
+
+			Files::GetModsDirectory() + sourceName,
+			Files::GetSteamDirectory() + "rooms/" + destinationName,
+			Files::GetSteamDirectory() + "rooms/backup/" + destinationName
 		));
+	
+	
+	 
 }
 
 

@@ -106,9 +106,13 @@ namespace DatabaseLoader
 		string backupName;
 
 		RoomFileReplacement(string name, string name2, string name3) : sourceName(name), destinationName(name2), backupName(name3) {}
+		bool operator==(const RoomFileReplacement& other) const {
+			return destinationName == other.destinationName;
+		}
 	};
 
 	inline vector<RoomFileReplacement> roomFiles;
+	inline vector<RoomFileReplacement> currentAddedRoomFiles;
 
 	class MusicType {
 	public:
