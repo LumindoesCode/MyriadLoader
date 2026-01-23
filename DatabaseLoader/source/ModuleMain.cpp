@@ -15,6 +15,7 @@
 #include <fstream>
 #include <thread>
 #include <stdlib.h>  
+#include <algorithm>
 
 #pragma comment(lib, "lua54.lib")
 
@@ -258,6 +259,7 @@ void DatabaseLoader::UnloadMods()
 void ClearData() 
 {
 	roomFiles.clear();
+	currentAddedRoomFiles.clear();
 	customEnemyNames.clear();
 	customMinibossNames.clear();
 	customBossNames.clear();
@@ -727,12 +729,23 @@ void DatabaseLoader::LoadMods()
 	}
 
 	
-
+	//Adds rooms to the game
 	for (size_t i = 0; i < roomFiles.size(); i++)
 	{
 		RoomFileReplacement roomFile = roomFiles[i];
-		Files::CopyFileTo(roomFile.destinationName, roomFile.backupName);
-		Files::AddRoomsToFile(roomFile.sourceName, roomFile.destinationName);
+		if (std::find(currentAddedRoomFiles.begin(), currentAddedRoomFiles.end(), roomFile) != currentAddedRoomFiles.end()) 
+		{
+			Files::AddRoomsToFile(roomFile.sourceName, roomFile.destinationName);
+		}
+		else 
+		{
+			g_YYTKInterface->Print(CM_LIGHTGREEN, "[Myriad Loader] Added " + roomFile.sourceName + " to " + roomFile.destinationName);
+			Files::CopyFileTo(roomFile.destinationName, roomFile.backupName);
+			Files::AddRoomsToFile(roomFile.sourceName, roomFile.destinationName);
+			currentAddedRoomFiles.push_back(roomFile);
+			
+		}
+		
 	}
 
 	unsigned int size = g_YYTKInterface->CallBuiltin("array_length", { GMWrappers::GetGlobal("gen_list") }).ToInt64();

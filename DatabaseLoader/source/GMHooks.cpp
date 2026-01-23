@@ -310,7 +310,6 @@ void LoadRooms()
 {
 	g_YYTKInterface->PrintWarning("LOADING ROOMS");
 	GMWrappers::CallGameScript("gml_Script_load_room_files", {});
-	RestoreRoomFiles();
 	g_YYTKInterface->PrintWarning("ROOMS LOADED");
 }
 
@@ -629,6 +628,7 @@ void CreateFloorFile(string floorRooms, RValue roomsDestinyString, string floorR
 	ofstream dst(roomsDestinyString.ToString());
 	dst << src.rdbuf();
 	LoadRooms();
+	RestoreRoomFiles();
 }
 void CreateMiniBossFile(string floorRooms, RValue roomsDestinyString, string floorRoomsDestiny)
 {
