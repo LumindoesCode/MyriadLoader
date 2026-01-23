@@ -42,7 +42,7 @@ void CreateModdedDirectories();
 sol::state MakeNewModState(filesystem::path modPath);
 bool ModInvalid(filesystem::path modPath, sol::state& currentModState);
 void ClearData();
-void RestoreRoomFiles();
+void DatabaseLoader::RestoreRoomFiles();
 
 static sol::table CopyTableFromStateTo(sol::state& source, sol::state& target, sol::table table_to_copy) {
 
@@ -258,6 +258,7 @@ void DatabaseLoader::UnloadMods()
 
 void ClearData() 
 {
+	RestoreRoomFiles();
 	roomFiles.clear();
 	currentAddedRoomFiles.clear();
 	customEnemyNames.clear();
@@ -739,7 +740,7 @@ void DatabaseLoader::LoadMods()
 		}
 		else 
 		{
-			g_YYTKInterface->Print(CM_LIGHTGREEN, "[Myriad Loader] Added " + roomFile.sourceName + " to " + roomFile.destinationName);
+			g_YYTKInterface->Print(CM_GREEN, "[Myriad Loader] Added " + roomFile.sourceName + " to " + roomFile.destinationName);
 			Files::CopyFileTo(roomFile.destinationName, roomFile.backupName);
 			Files::AddRoomsToFile(roomFile.sourceName, roomFile.destinationName);
 			currentAddedRoomFiles.push_back(roomFile);
@@ -747,6 +748,7 @@ void DatabaseLoader::LoadMods()
 		}
 		
 	}
+	
 
 	unsigned int size = g_YYTKInterface->CallBuiltin("array_length", { GMWrappers::GetGlobal("gen_list") }).ToInt64();
 
@@ -1046,20 +1048,18 @@ EXPORTED AurieStatus ModuleInitialize(
 #endif
 
 
-	yytk_interface->CreateCallback(
+	/*yytk_interface->CreateCallback(
 		Module,
 		YYTK::EVENT_OBJECT_CALL,
 		DrawLoadingScreen,
-		0);
+		0);*/
 
 	if (!AurieSuccess(last_status))
 		return AURIE_MODULE_DEPENDENCY_NOT_RESOLVED;
 
 	g_YYTKInterface->CallBuiltin("instance_deactivate_object", { g_YYTKInterface->CallBuiltin("asset_get_index", {"obj_intro"}) });
 
-	g_YYTKInterface->PrintWarning("LOADING MODS");
-	LoadMods();
-	g_YYTKInterface->PrintWarning("MODS LOADED");
+
 	g_YYTKInterface->PrintWarning("REGISTERING HOOKS");
 	RegisterHooks(Module);
 	g_YYTKInterface->PrintWarning("HOOKS REGISTERED");
