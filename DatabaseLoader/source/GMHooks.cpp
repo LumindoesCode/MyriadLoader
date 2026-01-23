@@ -21,7 +21,6 @@ bool FloorCreated(CCode* Code);
 bool CheckFloorID(int id);
 void HandleFloor(auto& stateNum, FWCodeEvent& FunctionContext, sol::table tbl, int id, int var);
 void CreateFloorFile(string floorRooms, RValue roomsDestinyString, string floorRoomsDestiny);
-void CreateMiniBossFile(string floorRooms, RValue roomsDestinyString, string floorRoomsDestiny);
 void ForceFloor(int id, auto& stateNum, RValue floordsmap, FWCodeEvent& FunctionContext, int var);
 
 
@@ -460,7 +459,11 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 			{
 					
 				RValue floordsmap = g_YYTKInterface->CallBuiltin("ds_map_create", {});
-				g_YYTKInterface->CallBuiltin("ds_map_copy", { floordsmap, GMWrappers::GetGlobal("floormap_6") });
+				g_YYTKInterface->CallBuiltin("ds_map_copy", { floordsmap, GMWrappers::GetGlobal("floormap_1") });
+				g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "shop", true });
+				g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "upgrade", true });
+
+
 				string floorRooms = Files::GetModsDirectory() + tbl.get<string>("Rooms");
 				string floorRoomsDestiny = "rooms/" + tbl.get<string>("RoomsID");
 				RValue roomsDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)floorRoomsDestiny });
@@ -471,7 +474,32 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 					string minibossRooms = Files::GetModsDirectory() + tbl.get<string>("MinibossRooms");
 					string minibossRoomsDestiny = "rooms/miniboss_" + tbl.get<string>("RoomsID");
 					RValue minibossDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)minibossRoomsDestiny });
-					CreateMiniBossFile(minibossRooms, minibossDestinyString, minibossRoomsDestiny);
+					CreateFloorFile(minibossRooms, minibossDestinyString, minibossRoomsDestiny);
+				}
+				if (!tbl.get<string>("ShortcutRooms").empty())
+				{
+					g_YYTKInterface->PrintInfo("ayo from the shortcuts");
+					string minibossRooms = Files::GetModsDirectory() + tbl.get<string>("ShortcutRooms");
+					string minibossRoomsDestiny = "rooms/shortcuts/shortcut_" + tbl.get<string>("RoomsID");
+					RValue minibossDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)minibossRoomsDestiny });
+					g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "shortcut layout", (string_view)minibossRoomsDestiny });
+					CreateFloorFile(minibossRooms, minibossDestinyString, minibossRoomsDestiny);
+				}
+				if (!tbl.get<string>("LoopRooms").empty())
+				{
+					string minibossRooms = Files::GetModsDirectory() + tbl.get<string>("LoopRooms");
+					string minibossRoomsDestiny = "rooms/loop/loop_" + tbl.get<string>("RoomsID");
+					RValue minibossDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)minibossRoomsDestiny });
+					g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "loop layout", (string_view)minibossRoomsDestiny });
+					CreateFloorFile(minibossRooms, minibossDestinyString, minibossRoomsDestiny);
+				}
+				if (!tbl.get<string>("ShortcutRooms").empty())
+				{
+					string minibossRooms = Files::GetModsDirectory() + tbl.get<string>("DangerRooms");
+					string minibossRoomsDestiny = "rooms/danger/danger_" + tbl.get<string>("RoomsID");
+					RValue minibossDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)minibossRoomsDestiny });
+					g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "danger layout", (string_view)minibossRoomsDestiny });
+					CreateFloorFile(minibossRooms, minibossDestinyString, minibossRoomsDestiny);
 				}
 
 				//Creates Floor Files
@@ -527,7 +555,7 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 				{
 					RValue roomAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_fakefloor" });
 					double allRooms = g_YYTKInterface->CallBuiltin("instance_number", { roomAsset }).ToDouble() - 1;
-					double spriteID = 346;
+					double spriteID = 266;
 
 
 					for (int i = 0; i <= allRooms; i++)
@@ -543,7 +571,7 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 				{
 					RValue roomAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_floor" });
 					double allRooms = g_YYTKInterface->CallBuiltin("instance_number", { roomAsset }).ToDouble() - 1;
-					double spriteID = 346;
+					double spriteID = 266;
 
 					for (int i = 0; i <= allRooms; i++)
 					{
@@ -607,18 +635,46 @@ void HandleFloor(auto& stateNum, FWCodeEvent& FunctionContext, sol::table tbl, i
 {
 	//Initialize Floor variables 
 	RValue floordsmap = g_YYTKInterface->CallBuiltin("ds_map_create", {});
-	g_YYTKInterface->CallBuiltin("ds_map_copy", { floordsmap, GMWrappers::GetGlobal("floormap_6") });
+	g_YYTKInterface->CallBuiltin("ds_map_copy", { floordsmap, GMWrappers::GetGlobal("floormap_1") });
 	string floorRooms = Files::GetModsDirectory() + tbl.get<string>("Rooms");
 	string floorRoomsDestiny = "rooms/" + tbl.get<string>("RoomsID");
 	RValue roomsDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)floorRoomsDestiny });
 
+	g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "shop", true });
+	g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "upgrade", true });
 	if (!tbl.get<string>("MinibossRooms").empty())
 	{
 		string minibossRooms = Files::GetModsDirectory() + tbl.get<string>("MinibossRooms");
 		string minibossRoomsDestiny = "rooms/miniboss_" + tbl.get<string>("RoomsID");
 		RValue minibossDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)minibossRoomsDestiny });
-		g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "miniboss", minibossDestinyString});
+		g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "miniboss", (string_view)minibossRoomsDestiny });
 		g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "miniboss amount", tbl.get<int>("MinibossAmount") });
+		CreateFloorFile(minibossRooms, minibossDestinyString, minibossRoomsDestiny);
+	}
+	if (!tbl.get<string>("ShortcutRooms").empty())
+	{
+		g_YYTKInterface->PrintInfo("ayo from the shortcuts");
+		string minibossRooms = Files::GetModsDirectory() + tbl.get<string>("ShortcutRooms");
+		string minibossRoomsDestiny = "rooms/shortcuts/shortcut_" + tbl.get<string>("RoomsID");
+		RValue minibossDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)minibossRoomsDestiny });
+		g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "shortcut layout", (string_view)minibossRoomsDestiny });
+		CreateFloorFile(minibossRooms, minibossDestinyString, minibossRoomsDestiny);
+	}
+	if (!tbl.get<string>("LoopRooms").empty())
+	{
+		string minibossRooms = Files::GetModsDirectory() + tbl.get<string>("LoopRooms");
+		string minibossRoomsDestiny = "rooms/loop/loop_" + tbl.get<string>("RoomsID");
+		RValue minibossDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)minibossRoomsDestiny });
+		g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "loop layout", (string_view)minibossRoomsDestiny });
+		CreateFloorFile(minibossRooms, minibossDestinyString, minibossRoomsDestiny);
+	}
+	if (!tbl.get<string>("DangerRooms").empty())
+	{
+		string minibossRooms = Files::GetModsDirectory() + tbl.get<string>("DangerRooms");
+		string minibossRoomsDestiny = "rooms/danger/danger_" + tbl.get<string>("RoomsID");
+		RValue minibossDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)minibossRoomsDestiny });
+		g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "danger layout", (string_view)minibossRoomsDestiny });
+		CreateFloorFile(minibossRooms, minibossDestinyString, minibossRoomsDestiny);
 	}
 
 	
@@ -660,6 +716,7 @@ void HandleFloor(auto& stateNum, FWCodeEvent& FunctionContext, sol::table tbl, i
 		g_YYTKInterface->CallBuiltin("variable_instance_set", { nextFloor, "myr_CustomName", (string_view)customFloorName });	
 	}*/
 }
+
 void CreateFloorFile(string floorRooms, RValue roomsDestinyString, string floorRoomsDestiny) 
 {
 	//thank orio prisco for this
@@ -668,15 +725,6 @@ void CreateFloorFile(string floorRooms, RValue roomsDestinyString, string floorR
 	ofstream dst(roomsDestinyString.ToString());
 	dst << src.rdbuf();
 	
-	LoadRooms();
-	
-}
-void CreateMiniBossFile(string floorRooms, RValue roomsDestinyString, string floorRoomsDestiny)
-{
-	ifstream src(floorRooms);
-	ofstream dst(roomsDestinyString.ToString());
-	dst << src.rdbuf();
-	g_YYTKInterface->PrintInfo((string_view)floorRoomsDestiny);
 }
 void ForceFloor(int id, auto& stateNum, RValue floordsmap, FWCodeEvent& FunctionContext, int var) 
 {
