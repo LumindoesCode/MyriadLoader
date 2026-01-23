@@ -15,6 +15,7 @@
 #include <fstream>
 #include <thread>
 #include <stdlib.h>  
+#include <algorithm>
 
 #pragma comment(lib, "lua54.lib")
 
@@ -41,7 +42,7 @@ void CreateModdedDirectories();
 sol::state MakeNewModState(filesystem::path modPath);
 bool ModInvalid(filesystem::path modPath, sol::state& currentModState);
 void ClearData();
-void RestoreRoomFiles();
+void DatabaseLoader::RestoreRoomFiles();
 
 static sol::table CopyTableFromStateTo(sol::state& source, sol::state& target, sol::table table_to_copy) {
 
@@ -257,7 +258,9 @@ void DatabaseLoader::UnloadMods()
 
 void ClearData() 
 {
+	RestoreRoomFiles();
 	roomFiles.clear();
+	currentAddedRoomFiles.clear();
 	customEnemyNames.clear();
 	customMinibossNames.clear();
 	customBossNames.clear();
@@ -727,13 +730,25 @@ void DatabaseLoader::LoadMods()
 	}
 
 	
-
+	//Adds rooms to the game
 	for (size_t i = 0; i < roomFiles.size(); i++)
 	{
 		RoomFileReplacement roomFile = roomFiles[i];
-		Files::CopyFileTo(roomFile.destinationName, roomFile.backupName);
-		Files::AddRoomsToFile(roomFile.sourceName, roomFile.destinationName);
+		if (std::find(currentAddedRoomFiles.begin(), currentAddedRoomFiles.end(), roomFile) != currentAddedRoomFiles.end()) 
+		{
+			Files::AddRoomsToFile(roomFile.sourceName, roomFile.destinationName);
+		}
+		else 
+		{
+			g_YYTKInterface->Print(CM_GREEN, "[Myriad Loader] Added " + roomFile.sourceName + " to " + roomFile.destinationName);
+			Files::CopyFileTo(roomFile.destinationName, roomFile.backupName);
+			Files::AddRoomsToFile(roomFile.sourceName, roomFile.destinationName);
+			currentAddedRoomFiles.push_back(roomFile);
+			
+		}
+		
 	}
+	
 
 	unsigned int size = g_YYTKInterface->CallBuiltin("array_length", { GMWrappers::GetGlobal("gen_list") }).ToInt64();
 
@@ -1033,20 +1048,18 @@ EXPORTED AurieStatus ModuleInitialize(
 #endif
 
 
-	yytk_interface->CreateCallback(
+	/*yytk_interface->CreateCallback(
 		Module,
 		YYTK::EVENT_OBJECT_CALL,
 		DrawLoadingScreen,
-		0);
+		0);*/
 
 	if (!AurieSuccess(last_status))
 		return AURIE_MODULE_DEPENDENCY_NOT_RESOLVED;
 
 	g_YYTKInterface->CallBuiltin("instance_deactivate_object", { g_YYTKInterface->CallBuiltin("asset_get_index", {"obj_intro"}) });
 
-	g_YYTKInterface->PrintWarning("LOADING MODS");
-	LoadMods();
-	g_YYTKInterface->PrintWarning("MODS LOADED");
+
 	g_YYTKInterface->PrintWarning("REGISTERING HOOKS");
 	RegisterHooks(Module);
 	g_YYTKInterface->PrintWarning("HOOKS REGISTERED");
