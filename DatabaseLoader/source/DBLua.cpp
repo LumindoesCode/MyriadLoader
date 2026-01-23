@@ -1074,13 +1074,18 @@ sol::table DatabaseLoader::DBLua::FloorData(lua_State* state, string name)
 		"ColorR", [](double) { return 0; },
 		"ColorG", [](double) { return 0; },
 		"ColorB", [](double) { return 0; },
+		"Props", [](double) { return GetAsset("spr_props1"); },
+		"BigBlock", [](double) { return GetAsset("spr_bigblock1"); },
+		"GiantBlock", [](double) { return GetAsset("spr_giantblock1"); },
+		"Fragile", [](double) { return GetAsset("spr_fragile_block1"); },
+		"Door", [](double) { return GetAsset("spr_lock"); },
 		"Rooms", [](string) {},
 		"MinibossRooms", [](string) {},
 		"MinibossAmount", [](int) { return 1; },
 		"RoomsID", [](string) {},
 		"Create", [](double) {},
 		"Music", [](double) {return GetAsset("mus_floor6");},
-		"BossList", [](double) {},
+		"BossList", [](std::vector<double>) {},
 		"ShouldForceFloor", [](double) {return false; });
 }
 

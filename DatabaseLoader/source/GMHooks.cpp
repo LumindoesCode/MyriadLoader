@@ -418,6 +418,7 @@ vector<string> RegisterGMFloorFunctions()
 	GMfunctions.push_back("gml_Object_obj_room_Step_0");
 	GMfunctions.push_back("gml_Object_obj_fakefloor_Create_0");
 	GMfunctions.push_back("gml_Object_obj_floor_Create_0");
+	GMfunctions.push_back("gml_Object_obj_lock_Create_0");
 	GMfunctions.push_back("gml_Object_obj_beacon_Other_25");
 
 	return GMfunctions;
@@ -462,6 +463,7 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 				string floorRoomsDestiny = "rooms/" + tbl.get<string>("RoomsID");
 				RValue roomsDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)floorRoomsDestiny });
 
+
 				if (!tbl.get<string>("MinibossRooms").empty())
 				{
 					string minibossRooms = Files::GetModsDirectory() + tbl.get<string>("MinibossRooms");
@@ -488,6 +490,7 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 
 					GMWrappers::SetGlobal("current_music", floorMusic);
 
+
 					for (int i = 0; i < allRooms; i++)
 					{
 						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "sprite_index", tbl.get<double>("Backgrounds") });
@@ -497,12 +500,28 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "color3", tbl.get<double>("ColorB") });
 
 						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "room_theme", floorMusic });
+
+						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "room_prop", tbl.get<double>("Props")});
+						
+						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "room_fragile", tbl.get<double>("Fragile") });
+
+						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "room_block_big", tbl.get<double>("BigBlock") });
+
+						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "room_block_giant", tbl.get<double>("GiantBlock") });
+						
+						
 					}
+
 					DBLua::DoMusic(floorMusic);
 
 				}
 
-				if ((string)Code->GetName() == (string)"gml_Object_obj_fakefloor_Create_0");
+				if ((string)Code->GetName() == (string)"gml_Object_obj_lock_Create_0")
+				{
+					g_YYTKInterface->CallBuiltin("variable_instance_set", { GMWrappers::GetGlobal("room_active"), "room_door", tbl.get<double>("Door") });
+				}
+
+				if ((string)Code->GetName() == (string)"gml_Object_obj_fakefloor_Create_0")
 				{
 					RValue roomAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_fakefloor" });
 					double allRooms = g_YYTKInterface->CallBuiltin("instance_number", { roomAsset }).ToDouble() - 1;
@@ -536,7 +555,14 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 				{
 					RValue beaconAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_beacon" });
 					RValue beaconInstance = g_YYTKInterface->CallBuiltin("instance_find", { beaconAsset, 0 });
-					g_YYTKInterface->CallBuiltin("variable_instance_set", { beaconInstance, "getboss", tbl.get<double>("BossList") });
+					RValue bossList = g_YYTKInterface->CallBuiltin("ds_list_create", {});
+
+					for (int i = 0; i < tbl.get<vector<double>>("BossList").size(); i++)
+					{
+						g_YYTKInterface->CallBuiltin("ds_list_add", { bossList, tbl.get<vector<double>>("BossList")[i] });
+					}
+					g_YYTKInterface->CallBuiltin("ds_list_shuffle", { bossList });
+					g_YYTKInterface->CallBuiltin("variable_instance_set", { beaconInstance, "getboss", g_YYTKInterface->CallBuiltin("ds_list_find_value", {bossList, 0}) });
 				}
 			}
 
@@ -593,6 +619,12 @@ void HandleFloor(auto& stateNum, FWCodeEvent& FunctionContext, sol::table tbl, i
 	g_YYTKInterface->CallBuiltin("ds_map_set", { floordsmap, "index", id });
 	g_YYTKInterface->CallBuiltin("ds_map_add", { GMWrappers::GetGlobal("layout_map"), (string_view)floorRoomsDestiny, id });
 	g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "layout", roomsDestinyString });
+
+	if (tbl.get<double>("Props") != 0)
+	{
+		g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "prop", (string_view)tbl.get<string>("Props") });
+		//g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "prop index", id });
+	}
 
 	//TODO: Implement Music.
 	//double music = tbl.get<double>("Music");
