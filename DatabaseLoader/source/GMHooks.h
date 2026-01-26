@@ -102,6 +102,15 @@ namespace DatabaseLoader
 			IN RValue** Arguments
 		);
 
+		static RValue& GetAssetIndex(
+			
+				IN CInstance* Self,
+				IN CInstance* Other,
+				OUT RValue& Result,
+				IN int ArgumentCount,
+				IN RValue** Arguments
+			);
+
 		static void FloorData(
 			FWCodeEvent& FunctionContext
 		);

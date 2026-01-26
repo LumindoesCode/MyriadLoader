@@ -831,6 +831,8 @@ static void RegisterHooks(AurieModule* Module) {
 
 	CScript* script_data = nullptr;
 	PVOID original_function = nullptr;
+	
+
 
 	g_YYTKInterface->PrintWarning("CALLBACKS CREATED");
 	g_YYTKInterface->GetNamedRoutinePointer(
@@ -864,6 +866,28 @@ static void RegisterHooks(AurieModule* Module) {
 		"gml_Script_music_do_loop",
 		reinterpret_cast<PVOID*>(&script_data)
 	);
+
+
+	//Create Function Hook Here
+	TRoutine game_function = nullptr;
+	
+	g_YYTKInterface->GetNamedRoutinePointer(
+		"asset_get_index",
+		reinterpret_cast<PVOID*>(&game_function)
+	);
+	MmCreateHook(
+		g_ArSelfModule,
+		"GetAssetIndex",
+		script_data->m_Functions->m_ScriptFunction,
+		GMHooks::GetAssetIndex,
+		&original_function
+	);
+	//End Function Hook here
+	g_YYTKInterface->GetNamedRoutinePointer(
+		"gml_Script_music_do_loop",
+		reinterpret_cast<PVOID*>(&script_data)
+	);
+
 	MmCreateHook(
 		g_ArSelfModule,
 		"MusicDoLoop",
@@ -878,7 +902,7 @@ static void RegisterHooks(AurieModule* Module) {
 	);
 	MmCreateHook(
 		g_ArSelfModule,
-		"MusicDoLoop",
+		"ChooseBossIntro",
 		script_data->m_Functions->m_ScriptFunction,
 		GMHooks::ChooseBossIntro,
 		&original_function

@@ -294,6 +294,7 @@ RValue& GMHooks::ExitGame(IN CInstance* Self, IN CInstance* Other, OUT RValue& R
 	return Result;
 }
 
+
 RValue& GMHooks::EnterRun(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&EnterRun)>(MmGetHookTrampoline(g_ArSelfModule, "EnterRun"));
@@ -361,6 +362,23 @@ RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arg
 }*/
 
 return Result;
+}
+
+RValue& DatabaseLoader::GMHooks::GetAssetIndex(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+{
+	
+	auto original_function = reinterpret_cast<decltype(&EnterRun)>(MmGetHookTrampoline(g_ArSelfModule, "GetAssetIndex"));
+	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
+	RValue Instance = Self->ToRValue();
+	string InstanceID = g_YYTKInterface->CallBuiltin("variable_instance_get", { Instance, "id" }).ToString();
+	RValue objectIndex = g_YYTKInterface->CallBuiltin("variable_instance_get", { Instance, "object_index" }).ToDouble();
+
+	RValue dsMapFind = *Arguments[0];
+
+	
+	g_YYTKInterface->PrintWarning(dsMapFind.ToString());
+
+	return Result;
 }
 
 #pragma region FloorData Handling
