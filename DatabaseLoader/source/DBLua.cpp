@@ -1087,7 +1087,7 @@ sol::table DatabaseLoader::DBLua::FloorData(lua_State* state, string name)
 		"MinibossAmount", [](int) { return 1; },
 		"RoomsID", [](string) {},
 		"Create", [](double) {},
-		"Music", [](double) {return GetAsset("mus_floor6");},
+		"Music", [](string) {return "mus_floor6";},
 		"BossList", [](std::vector<double>) {},
 		"ShouldForceFloor", [](double) {return false; });
 }

@@ -452,11 +452,11 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 			if(FloorCreated(Code) || SaveCreated(Code))
 			{
 				HandleFloor(stateNum, FunctionContext, tbl, id, var);
+				g_YYTKInterface->PrintInfo((string_view)g_YYTKInterface->CallBuiltin("asset_get_index", { g_YYTKInterface->CallBuiltin("ds_map_find_value", {GMWrappers::GetGlobal("current_floormap"), "music"}) }).ToString());
 			}
 
 			if (SaveCreated(Code)) 
 			{
-					
 				RValue floordsmap = g_YYTKInterface->CallBuiltin("ds_map_create", {});
 				g_YYTKInterface->CallBuiltin("ds_map_copy", { floordsmap, GMWrappers::GetGlobal("floormap_1") });
 
@@ -464,6 +464,7 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 				string floorRoomsDestiny = "rooms/" + tbl.get<string>("RoomsID");
 				RValue roomsDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)floorRoomsDestiny });
 
+				g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "music", (string_view)tbl.get<string>("Music") });
 
 				if (!tbl.get<string>("MinibossRooms").empty())
 				{
@@ -508,13 +509,9 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 
 				if ((string)Code->GetName() == (string)"gml_Object_obj_room_Create_0")
 				{
-					double floorMusic = tbl.get<double>("Music");
-
 
 					RValue roomAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_room" });
 					double allRooms = g_YYTKInterface->CallBuiltin("instance_number", { roomAsset }).ToDouble() - 1;
-
-					GMWrappers::SetGlobal("current_music", floorMusic);
 
 
 					for (int i = 0; i < allRooms; i++)
@@ -524,8 +521,6 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "color1", tbl.get<double>("ColorR") });
 						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "color2", tbl.get<double>("ColorG") });
 						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "color3", tbl.get<double>("ColorB") });
-
-						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "room_theme", floorMusic });
 
 						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "room_prop", tbl.get<double>("Props")});
 						
@@ -538,7 +533,6 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 						
 					}
 
-					DBLua::DoMusic(floorMusic);
 
 				}
 
@@ -549,6 +543,11 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 
 				if ((string)Code->GetName() == (string)"gml_Object_obj_room_Other_10")
 				{
+					RValue musicID = g_YYTKInterface->CallBuiltin("ds_list_find_index", { GMWrappers::GetGlobal("song_name"), (string_view)tbl.get<string>("Music") });
+					g_YYTKInterface->PrintInfo((string_view)g_YYTKInterface->CallBuiltin("asset_get_index", { g_YYTKInterface->CallBuiltin("ds_map_find_value", {GMWrappers::GetGlobal("current_floormap"), "music"}) }).ToString());
+
+					//g_YYTKInterface->CallGameScript("gml_Script_music_do_loop", { musicID });
+
 					RValue roomAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_floor" });
 					double allRooms = g_YYTKInterface->CallBuiltin("instance_number", { roomAsset }).ToDouble() - 1;
 					RValue fakeAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_fakefloor" });
@@ -631,6 +630,11 @@ void HandleFloor(auto& stateNum, FWCodeEvent& FunctionContext, sol::table tbl, i
 	string floorRooms = Files::GetModsDirectory() + tbl.get<string>("Rooms");
 	string floorRoomsDestiny = "rooms/" + tbl.get<string>("RoomsID");
 	RValue roomsDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)floorRoomsDestiny });
+
+	RValue musicID = g_YYTKInterface->CallBuiltin("ds_list_find_index", { GMWrappers::GetGlobal("song_name"), (string_view)tbl.get<string>("Music") });
+
+	g_YYTKInterface->PrintInfo(g_YYTKInterface->CallBuiltin("audio_sound_is_playable", { musicID }).ToString());
+	g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "music", (string_view)tbl.get<string>("Music")});
 
 	if (!tbl.get<string>("MinibossRooms").empty())
 	{
