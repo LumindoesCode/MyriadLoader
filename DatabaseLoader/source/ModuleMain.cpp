@@ -869,19 +869,6 @@ static void RegisterHooks(AurieModule* Module) {
 
 
 	//Create Function Hook Here
-	TRoutine game_function = nullptr;
-	
-	g_YYTKInterface->GetNamedRoutinePointer(
-		"asset_get_index",
-		reinterpret_cast<PVOID*>(&game_function)
-	);
-	MmCreateHook(
-		g_ArSelfModule,
-		"GetAssetIndex",
-		script_data->m_Functions->m_ScriptFunction,
-		GMHooks::GetAssetIndex,
-		&original_function
-	);
 	//End Function Hook here
 	g_YYTKInterface->GetNamedRoutinePointer(
 		"gml_Script_music_do_loop",
@@ -919,6 +906,7 @@ static void RegisterHooks(AurieModule* Module) {
 		GMHooks::MusicDoLoopFromStart,
 		&original_function
 	);
+
 	g_YYTKInterface->PrintWarning("MUSIC HOOKS CREATED");
 
 	g_YYTKInterface->GetNamedRoutinePointer(

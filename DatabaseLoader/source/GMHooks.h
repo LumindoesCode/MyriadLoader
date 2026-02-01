@@ -7,6 +7,8 @@
 
 namespace DatabaseLoader
 {
+	inline static bool inRoomCreate;
+	inline static string currentFloorMusic;
 	class GMHooks
 	{
 	public:
@@ -102,13 +104,13 @@ namespace DatabaseLoader
 			IN RValue** Arguments
 		);
 
-		static RValue& GetAssetIndex(
-			
+		static void GetAssetIndex(
+
+				OUT RValue& Result,
 				IN CInstance* Self,
 				IN CInstance* Other,
-				OUT RValue& Result,
 				IN int ArgumentCount,
-				IN RValue** Arguments
+				IN RValue* Arguments
 			);
 
 		static void FloorData(
