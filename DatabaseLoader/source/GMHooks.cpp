@@ -294,6 +294,7 @@ RValue& GMHooks::ExitGame(IN CInstance* Self, IN CInstance* Other, OUT RValue& R
 	return Result;
 }
 
+
 RValue& GMHooks::EnterRun(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&EnterRun)>(MmGetHookTrampoline(g_ArSelfModule, "EnterRun"));
@@ -456,7 +457,6 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 
 			if (SaveCreated(Code)) 
 			{
-					
 				RValue floordsmap = g_YYTKInterface->CallBuiltin("ds_map_create", {});
 				g_YYTKInterface->CallBuiltin("ds_map_copy", { floordsmap, GMWrappers::GetGlobal("floormap_1") });
 
@@ -474,7 +474,6 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 				}
 				if (!tbl.get<string>("ShortcutRooms").empty())
 				{
-					g_YYTKInterface->PrintInfo("ayo from the shortcuts");
 					string minibossRooms = Files::GetModsDirectory() + tbl.get<string>("ShortcutRooms");
 					string minibossRoomsDestiny = "rooms/shortcuts/shortcut_" + tbl.get<string>("RoomsID");
 					RValue minibossDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)minibossRoomsDestiny });
@@ -508,14 +507,9 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 
 				if ((string)Code->GetName() == (string)"gml_Object_obj_room_Create_0")
 				{
-					double floorMusic = tbl.get<double>("Music");
-
-
+					inRoomCreate = true;
 					RValue roomAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_room" });
 					double allRooms = g_YYTKInterface->CallBuiltin("instance_number", { roomAsset }).ToDouble() - 1;
-
-					GMWrappers::SetGlobal("current_music", floorMusic);
-
 
 					for (int i = 0; i < allRooms; i++)
 					{
@@ -524,8 +518,6 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "color1", tbl.get<double>("ColorR") });
 						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "color2", tbl.get<double>("ColorG") });
 						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "color3", tbl.get<double>("ColorB") });
-
-						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "room_theme", floorMusic });
 
 						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "room_prop", tbl.get<double>("Props")});
 						
@@ -538,7 +530,6 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 						
 					}
 
-					DBLua::DoMusic(floorMusic);
 
 				}
 
@@ -549,6 +540,8 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 
 				if ((string)Code->GetName() == (string)"gml_Object_obj_room_Other_10")
 				{
+					//g_YYTKInterface->CallGameScript("gml_Script_music_do_loop", { musicID });
+
 					RValue roomAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_floor" });
 					double allRooms = g_YYTKInterface->CallBuiltin("instance_number", { roomAsset }).ToDouble() - 1;
 					RValue fakeAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_fakefloor" });
@@ -625,12 +618,15 @@ bool CheckFloorID(int id)
 }
 void HandleFloor(auto& stateNum, FWCodeEvent& FunctionContext, sol::table tbl, int id, int var)
 {
+
 	//Initialize Floor variables 
 	RValue floordsmap = g_YYTKInterface->CallBuiltin("ds_map_create", {});
 	g_YYTKInterface->CallBuiltin("ds_map_copy", { floordsmap, GMWrappers::GetGlobal("floormap_1") });
 	string floorRooms = Files::GetModsDirectory() + tbl.get<string>("Rooms");
 	string floorRoomsDestiny = "rooms/" + tbl.get<string>("RoomsID");
 	RValue roomsDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)floorRoomsDestiny });
+
+	g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "music", (string_view)tbl.get<string>("Music")});
 
 	if (!tbl.get<string>("MinibossRooms").empty())
 	{
@@ -643,7 +639,6 @@ void HandleFloor(auto& stateNum, FWCodeEvent& FunctionContext, sol::table tbl, i
 	}
 	if (!tbl.get<string>("ShortcutRooms").empty())
 	{
-		g_YYTKInterface->PrintInfo("ayo from the shortcuts");
 		string minibossRooms = Files::GetModsDirectory() + tbl.get<string>("ShortcutRooms");
 		string minibossRoomsDestiny = "rooms/shortcuts/shortcut_" + tbl.get<string>("RoomsID");
 		RValue minibossDestinyString = g_YYTKInterface->CallBuiltin("string", { (string_view)minibossRoomsDestiny });
@@ -672,6 +667,13 @@ void HandleFloor(auto& stateNum, FWCodeEvent& FunctionContext, sol::table tbl, i
 	g_YYTKInterface->CallBuiltin("ds_map_set", { floordsmap, "index", id });
 	g_YYTKInterface->CallBuiltin("ds_map_add", { GMWrappers::GetGlobal("layout_map"), (string_view)floorRoomsDestiny, id });
 	g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "layout", roomsDestinyString });
+	g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "challenger", ""});
+
+	RValue array = g_YYTKInterface->CallBuiltin("array_create", {0});
+	g_YYTKInterface->CallBuiltin("array_push", { array, (string_view)tbl.get<string>("Name") });
+	g_YYTKInterface->CallBuiltin("array_insert", { GMWrappers::GetGlobal("area_name"), id, array });
+
+	g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "name index", id });
 
 	if (tbl.get<double>("Props") != 0)
 	{
@@ -685,11 +687,6 @@ void HandleFloor(auto& stateNum, FWCodeEvent& FunctionContext, sol::table tbl, i
 
 	//TODO: Implement custom bossLists.
 	//double bossList = tbl.get<double>("BossList");
-
-
-	if (g_YYTKInterface->CallBuiltin("ds_map_find_value", { GMWrappers::GetGlobal("current_floormap"), "index" }).ToDouble() == g_YYTKInterface->CallBuiltin("ds_map_find_value", { floordsmap, "index" }).ToDouble())
-	{
-	}
 
 	if (!FunctionContext.CalledOriginal())
 	{
