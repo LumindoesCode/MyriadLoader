@@ -488,7 +488,7 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 					g_YYTKInterface->CallBuiltin("ds_map_replace", { floordsmap, "loop layout", (string_view)minibossRoomsDestiny });
 					CreateFloorFile(minibossRooms, minibossDestinyString, minibossRoomsDestiny);
 				}
-				if (!tbl.get<string>("ShortcutRooms").empty())
+				if (!tbl.get<string>("DangerRooms").empty())
 				{
 					string minibossRooms = Files::GetModsDirectory() + tbl.get<string>("DangerRooms");
 					string minibossRoomsDestiny = "rooms/danger/danger_" + tbl.get<string>("RoomsID");
@@ -526,8 +526,7 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "room_block_big", tbl.get<double>("BigBlock") });
 
 						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "room_block_giant", tbl.get<double>("GiantBlock") });
-						
-						
+
 					}
 
 
@@ -546,12 +545,18 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 					double allRooms = g_YYTKInterface->CallBuiltin("instance_number", { roomAsset }).ToDouble() - 1;
 					RValue fakeAsset = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_fakefloor" });
 					double allFakes = g_YYTKInterface->CallBuiltin("instance_number", { fakeAsset }).ToDouble() - 1;
-					double spriteID = 266;
 
 
 					for (int i = 0; i <= allRooms; i++)
 					{
-						if (g_YYTKInterface->CallBuiltin("variable_instance_get", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "sprite_index" }).ToDouble() == spriteID)
+						if (g_YYTKInterface->CallBuiltin("variable_instance_get", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "object_index" }).ToString() == g_YYTKInterface->CallBuiltin("asset_get_index", {"obj_floor"}).ToString() ||
+						g_YYTKInterface->CallBuiltin("variable_instance_get", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "object_index" }).ToString() == g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_moveblock" }).ToString() ||
+						g_YYTKInterface->CallBuiltin("object_is_ancestor", { g_YYTKInterface->CallBuiltin("variable_instance_get", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "object_index" }), g_YYTKInterface->CallBuiltin("asset_get_index", {"obj_moveblock"}) }))
+						{
+							g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "sprite_index", tbl.get<double>("Tileset") });
+						}
+
+						if (g_YYTKInterface->CallBuiltin("variable_instance_get", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "object_index" }).ToString() == g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_secret_room_block" }).ToString())
 						{
 							g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {roomAsset, i}), "sprite_index", tbl.get<double>("Tileset") });
 						}
@@ -559,10 +564,7 @@ void HandleFloorDataBehaviors(auto& stateNum, sol::table& count, CCode* Code, FW
 
 					for (int i = 0; i <= allFakes; i++)
 					{
-						if (g_YYTKInterface->CallBuiltin("variable_instance_get", { g_YYTKInterface->CallBuiltin("instance_find", {fakeAsset, i}), "sprite_index" }).ToDouble() == spriteID)
-						{
-							g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {fakeAsset, i}), "sprite_index", tbl.get<double>("Tileset") });
-						}
+						g_YYTKInterface->CallBuiltin("variable_instance_set", { g_YYTKInterface->CallBuiltin("instance_find", {fakeAsset, i}), "sprite_index", tbl.get<double>("Tileset") });
 					}
 
 				}
