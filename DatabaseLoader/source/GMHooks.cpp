@@ -918,10 +918,7 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 								g_YYTKInterface->CallBuiltin("array_set", { bossArray, 0, Files::HashString(tbl["Name"]) });
 								g_YYTKInterface->CallBuiltin("array_set", { bossArray, 1, 35 });
 
-								g_YYTKInterface->PrintInfo(g_YYTKInterface->CallBuiltin("ds_list_size", { bossList }).ToString());
 								g_YYTKInterface->CallBuiltin("ds_list_add", { bossList, bossArray });
-
-								customBossAmount += 1;
 							}
 						}
 
