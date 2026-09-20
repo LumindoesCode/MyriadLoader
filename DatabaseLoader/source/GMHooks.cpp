@@ -253,6 +253,8 @@ RValue& GMHooks::SpawnRoomObject(IN CInstance* Self, IN CInstance* Other, OUT RV
 RValue& GMHooks::WriteSaveData(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	g_YYTKInterface->CallBuiltin("array_resize", { GMWrappers::GetGlobal("gen_list"), 289 });
+	g_YYTKInterface->CallBuiltin("array_resize", { GMWrappers::GetGlobal("enemy_kills"), 99999 });
+	g_YYTKInterface->CallBuiltin("array_resize", { GMWrappers::GetGlobal("enemy_kills_hardmode"), 99999 });
 
 	RValue originalMusUnlock = GMWrappers::GetGlobal("mus_unlock");
 
@@ -287,6 +289,14 @@ RValue& GMHooks::WriteMidSave(IN CInstance* Self, IN CInstance* Other, OUT RValu
 }
 
 RValue& GMHooks::ExitGame(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
+{
+	auto original_function = reinterpret_cast<decltype(&ExitGame)>(MmGetHookTrampoline(g_ArSelfModule, "ExitGame"));
+	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
+
+	return Result;
+}
+
+RValue& GMHooks::SelectMirror(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
 	auto original_function = reinterpret_cast<decltype(&ExitGame)>(MmGetHookTrampoline(g_ArSelfModule, "ExitGame"));
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
@@ -798,7 +808,11 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 	AllNames.push_back("gml_Object_obj_boss_template_Draw_0");
 	//Mirror data
 	AllNames.push_back("gml_Object_obj_boss_practice_spawn_Create_0");
-	AllNames.push_back("gml_Object_obj_practice_manager_bosses_Draw_73");
+	AllNames.push_back("gml_Object_obj_practice_manager_bosses_Step_0");
+	AllNames.push_back("gml_Object_obj_practice_manager_bosses_Create_0");
+	AllNames.push_back("gml_Object_obj_mirror_Create_0");
+	AllNames.push_back("gml_Object_obj_boss_practice_spawn_Create_0");
+	AllNames.push_back("gml_Object_obj_bestiary_Create_0");
 	//Projectile data
 	//AllNames.push_back("gml_Object_obj_bullet_type_Create_0");
 	//AllNames.push_back("gml_Object_obj_bullet_type_Step_0");
@@ -809,6 +823,7 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 
 	CCode* Code = std::get<2>(FunctionContext.Arguments());
 
+	int customBossAmount = 0;
 	if (std::find(AllNames.begin(), AllNames.end(), Code->GetName()) != AllNames.end())
 	{
 		CInstance* GlobalInstance;
@@ -869,23 +884,59 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 			sol::table count = modState.at(stateNum)["all_behaviors"];
 				for (double var = 0; var < count.size() + 1; var++)
 				{
+					sol::table tbl = modState.at(stateNum)["all_behaviors"][var];
 					{
 						// Boss scripts 
+
+
+						if ((string)Code->GetName() == (string)"gml_Object_obj_boss_practice_spawn_Create_0")
+						{
+							if (!FunctionContext.CalledOriginal())
+							{
+								FunctionContext.Call();
+								g_YYTKInterface->CallGameScript("gml_Script_instance_create", {
+									modState.at(stateNum).get<double>("view_x"),
+									modState.at(stateNum).get<double>("view_y") + 40,
+									GMWrappers::GetGlobal("practice_index") });
+							}
+
+						}
+
+						if ((string)Code->GetName() == (string)"gml_Object_obj_practice_manager_bosses_Create_0")
+						{
+							if (!FunctionContext.CalledOriginal())
+							{
+								FunctionContext.Call();
+							}
+
+							RValue bossListObj = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_practice_manager_bosses" });
+							RValue bossList = g_YYTKInterface->CallBuiltin("variable_instance_get", { bossListObj, "boss_list" });
+							bossArray = g_YYTKInterface->CallBuiltin("array_create", { 2 });
+
+							if (modState.at(stateNum)["all_behaviors"][var]["Boss"] == true)
+							{
+								g_YYTKInterface->CallBuiltin("array_set", { bossArray, 0, Files::HashString(tbl["Name"]) });
+								g_YYTKInterface->CallBuiltin("array_set", { bossArray, 1, 35 });
+
+								g_YYTKInterface->PrintInfo(g_YYTKInterface->CallBuiltin("ds_list_size", { bossList }).ToString());
+								g_YYTKInterface->CallBuiltin("ds_list_add", { bossList, bossArray });
+
+								customBossAmount += 1;
+							}
+						}
+
 						if (modState.at(stateNum)["all_behaviors"][var]["Boss"] == true)
 						{
-							sol::table tbl = modState.at(stateNum)["all_behaviors"][var];
 
-							vector<double> bossInstances;
-							if (InstanceName == tbl.get<string>("Name"))
-							{
-								bossInstances.push_back(InstanceID);
-							}
+
+							sol::table tbl = modState.at(stateNum)["all_behaviors"][var];
 
 							// (run exclusively from obj_boss_intro_template)
 							if ((string)Code->GetName() == (string)"gml_Object_obj_boss_intro_template_Draw_0")
 							{
 								if (tbl.get<string>("Name") == InstanceName)
 								{
+
 									g_YYTKInterface->CallBuiltin("variable_instance_set", { InstanceID, "timer", 0 });
 									g_YYTKInterface->CallBuiltin("variable_instance_set", { InstanceID, "depth", 100000 });
 									modState.at(stateNum)["all_behaviors"][var]["BossIntro"].call(InstanceID);
@@ -913,21 +964,9 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 							
 							}
 
-							for (int i = 0; i < bossInstances.size(); i++)
-							{
-								if ((string)Code->GetName() == (string)"gml_Object_obj_practice_manager_bosses_Draw_73")
-								{
-									g_YYTKInterface->PrintInfo("ayo");
-									RValue bossListObj = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_practice_manager_bosses" });
-									RValue bossList = g_YYTKInterface->CallBuiltin("variable_instance_get", { bossListObj, "boss_list" });
-									RValue bossArray = g_YYTKInterface->CallBuiltin("array_create", { 2, bossInstances[i]});
-									g_YYTKInterface->CallBuiltin("array_set", { bossArray, 1, g_YYTKInterface->CallBuiltin("ds_list_size", {bossList}).ToDouble() + i});
-
-									g_YYTKInterface->CallBuiltin("ds_list_add", { bossList, bossArray });
-								}
-							}
 
 						}
+						
 				}
 			}
 			if (modState.at(stateNum)["all_behaviors"])
@@ -940,6 +979,7 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 					{
 						if (tbl.get<string>("Name") == InstanceName || tbl.get<string>("Name") == "all")
 						{
+
 							// Enemy scripts
 							if (tbl.get<string>("DataType") == "enemy")
 							{
@@ -952,6 +992,8 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 								if ((string)Code->GetName() == (string)"gml_Object_obj_enemy_Destroy_0")
 								{
 									modState.at(stateNum)["all_behaviors"][var]["Destroy"].call(InstanceID);
+
+									g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("enemy_kills"), Files::HashString(tbl.get<string>("Name")), 1 });
 								}
 								// Draw script
 								if ((string)Code->GetName() == (string)"gml_Object_obj_enemy_Draw_0")
@@ -1043,6 +1085,8 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 		}
 	}
 }
+
+
 void GMHooks::CartridgeData(FWCodeEvent& FunctionContext) {
 	vector<string> AllNames;
 

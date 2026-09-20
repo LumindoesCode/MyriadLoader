@@ -999,6 +999,18 @@ static void RegisterHooks(AurieModule* Module) {
 	);
 
 	g_YYTKInterface->GetNamedRoutinePointer(
+		"gml_GlobalScript_mirror_parent_practice_confirm",
+		reinterpret_cast<PVOID*>(&script_data)
+	);
+	MmCreateHook(
+		g_ArSelfModule,
+		"SelectMirror",
+		script_data->m_Functions->m_ScriptFunction,
+		GMHooks::SelectMirror,
+		&original_function
+	);
+
+	g_YYTKInterface->GetNamedRoutinePointer(
 		"gml_Script_button_start",
 		reinterpret_cast<PVOID*>(&script_data)
 	);

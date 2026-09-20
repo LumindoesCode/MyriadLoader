@@ -96,6 +96,8 @@ namespace DatabaseLoader
 	inline vector<string> customMinibossNames;
 	inline vector<string> customBossNames;
 
+	inline RValue bossArray;
+
 	inline vector<string> customCartridgeNames;
 
 	inline vector<string> customFloorNames;
