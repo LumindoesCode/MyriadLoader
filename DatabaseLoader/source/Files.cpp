@@ -69,6 +69,45 @@ bool DatabaseLoader::Files::MakeDirectory(string dir_name)
     return dir;
 }
 
+bool DatabaseLoader::Files::MakeDeathLocalization(string bossName)
+{
+    ifstream infile(Files::GetSteamDirectory() + "localization/death_source_string.csv");
+    ofstream outfile(Files::GetSteamDirectory() + "localization/death_source_string.csv", std::ios::app);
+    string line;
+    bool alreadyLocalized = false;
+
+    if (infile.is_open())
+    {
+        while (getline(infile, line))
+        {
+            if (outfile.is_open())
+            {
+                if (line == to_string(Files::HashString(bossName)) + ", ," + bossName)
+                {
+                    alreadyLocalized = true;
+                }
+            }
+            else
+            {
+
+                return false;
+            }
+        }
+        if (!alreadyLocalized)
+        {
+            outfile << Files::HashString(bossName) << ", ," << bossName << "\n";
+        }
+    }
+    else
+    {
+        g_YYTKInterface->PrintInfo("uh oh");
+        return false;
+    }
+    infile.close();
+    outfile.close();
+    return true;
+}
+
 std::string DatabaseLoader::Files::GetFileContents(const std::string& filePath)
 {
     std::ifstream file(filePath);

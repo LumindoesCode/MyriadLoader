@@ -1044,7 +1044,7 @@ sol::table DatabaseLoader::DBLua::EnemyData(lua_State* state, string name)
 		"ShouldForceBoss", [](double) {return false; },
 		"BossIntro", [](double) {},
 		"BossBackground", [](double) {},
-		"BossMirrorMugshot", (double) 35,
+		"BossMirrorMugshot", (double) GetAsset("spr_dumb_placeholder_face"),
 		"Create", [](double) {},
 		"Step", [](double) {},
 		"Destroy", [](double) {},

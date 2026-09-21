@@ -131,6 +131,5 @@ namespace DatabaseLoader
 		static void CartridgeData(
 			FWCodeEvent& FunctionContext
 		);
-
 	};
 }

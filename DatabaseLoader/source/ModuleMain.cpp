@@ -999,7 +999,7 @@ static void RegisterHooks(AurieModule* Module) {
 	);
 
 	g_YYTKInterface->GetNamedRoutinePointer(
-		"gml_GlobalScript_mirror_parent_practice_confirm",
+		"gml_Script_draw_boss_button",
 		reinterpret_cast<PVOID*>(&script_data)
 	);
 	MmCreateHook(

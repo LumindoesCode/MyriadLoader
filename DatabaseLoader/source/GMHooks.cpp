@@ -255,6 +255,7 @@ RValue& GMHooks::WriteSaveData(IN CInstance* Self, IN CInstance* Other, OUT RVal
 	g_YYTKInterface->CallBuiltin("array_resize", { GMWrappers::GetGlobal("gen_list"), 289 });
 	g_YYTKInterface->CallBuiltin("array_resize", { GMWrappers::GetGlobal("enemy_kills"), 99999 });
 	g_YYTKInterface->CallBuiltin("array_resize", { GMWrappers::GetGlobal("enemy_kills_hardmode"), 99999 });
+	g_YYTKInterface->CallBuiltin("array_resize", { GMWrappers::GetGlobal("death_source_string"), 99999 });
 
 	RValue originalMusUnlock = GMWrappers::GetGlobal("mus_unlock");
 
@@ -298,8 +299,70 @@ RValue& GMHooks::ExitGame(IN CInstance* Self, IN CInstance* Other, OUT RValue& R
 
 RValue& GMHooks::SelectMirror(IN CInstance* Self, IN CInstance* Other, OUT RValue& Result, IN int ArgumentCount, IN RValue** Arguments)
 {
-	auto original_function = reinterpret_cast<decltype(&ExitGame)>(MmGetHookTrampoline(g_ArSelfModule, "ExitGame"));
+	auto original_function = reinterpret_cast<decltype(&SelectMirror)>(MmGetHookTrampoline(g_ArSelfModule, "SelectMirror"));
 	RValue& return_value = original_function(Self, Other, Result, ArgumentCount, Arguments);
+
+	RValue Instance = Self->ToRValue();
+	double InstanceID = g_YYTKInterface->CallBuiltin("variable_instance_get", { Instance, "id" }).ToDouble();
+
+	RValue objectIndex = g_YYTKInterface->CallBuiltin("variable_instance_get", { Instance, "object_index" });
+
+	string InstanceName = "";
+	bool is_custom = false;
+	if (g_YYTKInterface->CallBuiltin("variable_instance_exists", { Instance, "myr_CustomName" }).ToBoolean())
+	{
+		is_custom = true;
+		InstanceName = g_YYTKInterface->CallBuiltin("variable_instance_get", { Instance, "myr_CustomName" }).ToString();
+	}
+	else {
+		InstanceName = g_YYTKInterface->CallBuiltin("object_get_name", { objectIndex }).ToString();
+	}
+
+	int offset = 29;
+	if (GMWrappers::CallGameScript("gml_Script_has_killed_enemy", { 253 }))
+	{
+		offset += 1;
+	}
+	if (GMWrappers::GetGlobal("boss_rush5") && 1)
+	{
+		offset += 1;
+	}
+	int customAmount = 0;
+
+	double bossMugshot;
+	bool bossBool;
+
+	double viewX;
+	double viewY;
+
+	for (int stateNum = 0; stateNum < modState.size(); stateNum++)
+	{
+		sol::table count = modState.at(stateNum)["all_behaviors"];
+		for (double var = 0; var < count.size() + 1; var++)
+		{
+			sol::table tbl = modState.at(stateNum)["all_behaviors"][var];
+			viewX = modState.at(currentState)["view_x"];
+			viewY = modState.at(currentState)["view_y"];
+
+			if (tbl["Boss"] == true)
+			{
+				bossMugshot = tbl["BossMirrorMugshot"];
+
+				if (bossMugshot == DBLua::GetAsset("spr_dumb_placeholder_face") && GMWrappers::GetGlobal("practice_index2").ToDouble() >= offset && !bossBool)
+				{
+					g_YYTKInterface->CallBuiltin("draw_sprite_ext", { DBLua::GetAsset("spr_blackblock"), 0, viewX + 110, viewY + 70, 8, 8, 0, DBLua::CreateColor(255, 255, 255), 1 });
+					g_YYTKInterface->CallBuiltin("draw_sprite", { DBLua::GetAsset("spr_dumb_placeholder_face"), 0, viewX + 180, viewY + 110 });
+					bossBool = true;
+				}
+				if (GMWrappers::GetGlobal("practice_index2").ToDouble() >= offset)
+				{
+					g_YYTKInterface->CallBuiltin("draw_sprite_ext", { DBLua::GetAsset("spr_blackblock"), 0, viewX + 100, viewY + 70, 8, 8, 0, DBLua::CreateColor(255, 255, 255), 1 });
+					g_YYTKInterface->CallBuiltin("draw_sprite", { tbl.get<double>("BossMirrorMugshot"), 0, viewX + 180, viewY + 110});
+				}
+			}
+		}
+	}
+
 
 	return Result;
 }
@@ -791,6 +854,7 @@ static void SpawnBossLogic(FWCodeEvent& FunctionContext, CCode* Code) {
 		}
 	}
 }
+
 void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 {
 	vector<string> AllNames;
@@ -808,11 +872,12 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 	AllNames.push_back("gml_Object_obj_boss_template_Draw_0");
 	//Mirror data
 	AllNames.push_back("gml_Object_obj_boss_practice_spawn_Create_0");
-	AllNames.push_back("gml_Object_obj_practice_manager_bosses_Step_0");
+	AllNames.push_back("gml_Script_draw_boss_button");
 	AllNames.push_back("gml_Object_obj_practice_manager_bosses_Create_0");
 	AllNames.push_back("gml_Object_obj_mirror_Create_0");
 	AllNames.push_back("gml_Object_obj_boss_practice_spawn_Create_0");
 	AllNames.push_back("gml_Object_obj_bestiary_Create_0");
+	AllNames.push_back("gml_Object_obj_mod_button_Create_0");
 	//Projectile data
 	//AllNames.push_back("gml_Object_obj_bullet_type_Create_0");
 	//AllNames.push_back("gml_Object_obj_bullet_type_Step_0");
@@ -823,7 +888,6 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 
 	CCode* Code = std::get<2>(FunctionContext.Arguments());
 
-	int customBossAmount = 0;
 	if (std::find(AllNames.begin(), AllNames.end(), Code->GetName()) != AllNames.end())
 	{
 		CInstance* GlobalInstance;
@@ -894,6 +958,8 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 							if (!FunctionContext.CalledOriginal())
 							{
 								FunctionContext.Call();
+
+
 								g_YYTKInterface->CallGameScript("gml_Script_instance_create", {
 									modState.at(stateNum).get<double>("view_x"),
 									modState.at(stateNum).get<double>("view_y") + 40,
@@ -901,6 +967,7 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 							}
 
 						}
+
 
 						if ((string)Code->GetName() == (string)"gml_Object_obj_practice_manager_bosses_Create_0")
 						{
@@ -911,14 +978,27 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 
 							RValue bossListObj = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_practice_manager_bosses" });
 							RValue bossList = g_YYTKInterface->CallBuiltin("variable_instance_get", { bossListObj, "boss_list" });
+
 							bossArray = g_YYTKInterface->CallBuiltin("array_create", { 2 });
 
 							if (modState.at(stateNum)["all_behaviors"][var]["Boss"] == true)
 							{
+								Files::MakeDeathLocalization(tbl.get<string>("Name"));
+
 								g_YYTKInterface->CallBuiltin("array_set", { bossArray, 0, Files::HashString(tbl["Name"]) });
 								g_YYTKInterface->CallBuiltin("array_set", { bossArray, 1, 35 });
 
 								g_YYTKInterface->CallBuiltin("ds_list_add", { bossList, bossArray });
+							}
+						}
+
+						if ((string)Code->GetName() == (string)"gml_Script_draw_boss_button")
+						{
+							if (!FunctionContext.CalledOriginal())
+							{
+								FunctionContext.Call();
+								
+								g_YYTKInterface->PrintWarning("ayo");
 							}
 						}
 
@@ -1082,7 +1162,6 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 		}
 	}
 }
-
 
 void GMHooks::CartridgeData(FWCodeEvent& FunctionContext) {
 	vector<string> AllNames;
