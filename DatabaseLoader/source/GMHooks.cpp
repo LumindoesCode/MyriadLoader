@@ -959,7 +959,17 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 							{
 								FunctionContext.Call();
 
+								int offset = 29;
+								if (GMWrappers::CallGameScript("gml_Script_has_killed_enemy", { 253 }))
+								{
+									offset += 1;
+								}
+								if (GMWrappers::GetGlobal("boss_rush5") && 1)
+								{
+									offset += 1;
+								}
 
+								if (GMWrappers::GetGlobal("practice_index2").ToDouble() >= offset)
 								g_YYTKInterface->CallGameScript("gml_Script_instance_create", {
 									modState.at(stateNum).get<double>("view_x"),
 									modState.at(stateNum).get<double>("view_y") + 40,
