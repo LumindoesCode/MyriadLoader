@@ -27,6 +27,7 @@ namespace DatabaseLoader
 		static bool AddRoomsToFile(const std::string& sourcePath, const std::string& destinationPath);
 		static std::vector<filesystem::path> GetFilesOfType(const std::string& dir_path, const std::string& extension);
 		static bool MakeDirectory(string dir_name);
+		static bool MakeDeathLocalization(string bossName);
 		static std::string GetFileContents(const std::string& filePath);
 		static int HashString(string name);
 	};
