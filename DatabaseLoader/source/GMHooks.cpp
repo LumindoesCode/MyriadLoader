@@ -330,6 +330,7 @@ RValue& GMHooks::SelectMirror(IN CInstance* Self, IN CInstance* Other, OUT RValu
 
 	bool bossBool = true;
 	vector<double> Mugshots;
+	vector<double> NameIDs;
 
 
 	for (int stateNum = 0; stateNum < modState.size(); stateNum++)
@@ -342,14 +343,23 @@ RValue& GMHooks::SelectMirror(IN CInstance* Self, IN CInstance* Other, OUT RValu
 			if (tbl["Boss"] == true)
 			{
 				Mugshots.push_back(tbl.get<double>("BossMirrorMugshot"));
+				NameIDs.push_back(Files::HashString(tbl.get<string>("Name")));
 
-				if (GMWrappers::GetGlobal("practice_index2").ToDouble() >= offset && tbl.get<double>("BossMirrorMugshot") != DBLua::GetAsset("spr_dumb_placeholder_face")
-					&& GMWrappers::CallGameScript("gml_Script_has_killed_enemy", { Files::HashString(tbl.get<string>("Name")) }))
+				if (GMWrappers::GetGlobal("practice_index2").ToDouble() >= offset)
 				{
-					g_YYTKInterface->CallBuiltin("variable_instance_set", { Instance, "button_graphic", Mugshots[GMWrappers::GetGlobal("practice_index2").ToDouble() - offset]});
-					bossBool = false;
+					if (NameIDs[GMWrappers::GetGlobal("practice_index2").ToDouble() - offset] == Files::HashString(tbl.get<string>("Name")))
+					{
+						if (GMWrappers::CallGameScript("gml_Script_has_killed_enemy", { NameIDs[GMWrappers::GetGlobal("practice_index2").ToDouble() - offset] }))
+						{
+							g_YYTKInterface->CallBuiltin("variable_instance_set", { Instance, "button_graphic", Mugshots[GMWrappers::GetGlobal("practice_index2").ToDouble() - offset] });
+						}
+						else
+						{
+							g_YYTKInterface->CallBuiltin("variable_instance_set", { Instance, "button_graphic", DBLua::GetAsset("spr_dumb_placeholder_face") });
+						}
+					}
 				}
-				else if (bossBool)
+				else
 				{
 					g_YYTKInterface->CallBuiltin("variable_instance_set", { Instance, "button_graphic", DBLua::GetAsset("spr_boss_mugshot")});
 				}
