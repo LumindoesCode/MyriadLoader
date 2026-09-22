@@ -990,6 +990,11 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 								FunctionContext.Call();
 							}
 
+							if (modState.at(stateNum)["all_behaviors"][var]["BossMirrorUnlocked"] == true)
+							{
+								g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("enemy_kills"), Files::HashString(tbl.get<string>("Name")), 1 });
+							}
+
 							RValue bossListObj = g_YYTKInterface->CallBuiltin("asset_get_index", { "obj_practice_manager_bosses" });
 							RValue bossList = g_YYTKInterface->CallBuiltin("variable_instance_get", { bossListObj, "boss_list" });
 
@@ -1083,8 +1088,6 @@ void GMHooks::EnemyData(FWCodeEvent& FunctionContext)
 								if ((string)Code->GetName() == (string)"gml_Object_obj_enemy_Destroy_0")
 								{
 									modState.at(stateNum)["all_behaviors"][var]["Destroy"].call(InstanceID);
-
-									g_YYTKInterface->CallBuiltin("array_set", { GMWrappers::GetGlobal("enemy_kills"), Files::HashString(tbl.get<string>("Name")), 1 });
 								}
 								// Draw script
 								if ((string)Code->GetName() == (string)"gml_Object_obj_enemy_Draw_0")
