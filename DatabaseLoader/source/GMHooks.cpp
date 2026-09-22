@@ -327,13 +327,10 @@ RValue& GMHooks::SelectMirror(IN CInstance* Self, IN CInstance* Other, OUT RValu
 	{
 		offset += 1;
 	}
-	int customAmount = 0;
 
-	double bossMugshot;
-	bool bossBool;
+	bool bossBool = true;
+	vector<double> Mugshots;
 
-	double viewX;
-	double viewY;
 
 	for (int stateNum = 0; stateNum < modState.size(); stateNum++)
 	{
@@ -341,23 +338,20 @@ RValue& GMHooks::SelectMirror(IN CInstance* Self, IN CInstance* Other, OUT RValu
 		for (double var = 0; var < count.size() + 1; var++)
 		{
 			sol::table tbl = modState.at(stateNum)["all_behaviors"][var];
-			viewX = modState.at(currentState)["view_x"];
-			viewY = modState.at(currentState)["view_y"];
 
 			if (tbl["Boss"] == true)
 			{
-				bossMugshot = tbl["BossMirrorMugshot"];
+				Mugshots.push_back(tbl.get<double>("BossMirrorMugshot"));
 
-				if (bossMugshot == DBLua::GetAsset("spr_dumb_placeholder_face") && GMWrappers::GetGlobal("practice_index2").ToDouble() >= offset && !bossBool)
+				if (GMWrappers::GetGlobal("practice_index2").ToDouble() >= offset && tbl.get<double>("BossMirrorMugshot") != DBLua::GetAsset("spr_dumb_placeholder_face")
+					&& GMWrappers::CallGameScript("gml_Script_has_killed_enemy", { Files::HashString(tbl.get<string>("Name")) }))
 				{
-					g_YYTKInterface->CallBuiltin("draw_sprite_ext", { DBLua::GetAsset("spr_blackblock"), 0, viewX + 110, viewY + 70, 8, 8, 0, DBLua::CreateColor(255, 255, 255), 1 });
-					g_YYTKInterface->CallBuiltin("draw_sprite", { DBLua::GetAsset("spr_dumb_placeholder_face"), 0, viewX + 180, viewY + 110 });
-					bossBool = true;
+					g_YYTKInterface->CallBuiltin("variable_instance_set", { Instance, "button_graphic", Mugshots[GMWrappers::GetGlobal("practice_index2").ToDouble() - offset]});
+					bossBool = false;
 				}
-				if (GMWrappers::GetGlobal("practice_index2").ToDouble() >= offset)
+				else if (bossBool)
 				{
-					g_YYTKInterface->CallBuiltin("draw_sprite_ext", { DBLua::GetAsset("spr_blackblock"), 0, viewX + 100, viewY + 70, 8, 8, 0, DBLua::CreateColor(255, 255, 255), 1 });
-					g_YYTKInterface->CallBuiltin("draw_sprite", { tbl.get<double>("BossMirrorMugshot"), 0, viewX + 180, viewY + 110});
+					g_YYTKInterface->CallBuiltin("variable_instance_set", { Instance, "button_graphic", DBLua::GetAsset("spr_boss_mugshot")});
 				}
 			}
 		}
